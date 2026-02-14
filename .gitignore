@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files (local overrides)
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Laravel
+apps/api/storage/*.key
+apps/api/storage/logs/*
+apps/api/storage/framework/cache/*
+apps/api/storage/framework/sessions/*
+apps/api/storage/framework/views/*
+apps/api/bootstrap/cache/*
+!apps/api/storage/logs/.gitkeep
+!apps/api/storage/framework/cache/.gitkeep
+!apps/api/storage/framework/sessions/.gitkeep
+!apps/api/storage/framework/views/.gitkeep
+!apps/api/bootstrap/cache/.gitkeep
+
+# Composer
+composer.phar
+
+# PHPUnit
+.phpunit.result.cache
+phpunit.xml
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.log
+*.cache

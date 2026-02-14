@@ -1,0 +1,303 @@
+{
+  "common": {
+    "appName": "D&D Assistant",
+    "loading": "Загрузка...",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "back": "Назад",
+    "next": "Далее",
+    "finish": "Завершить",
+    "search": "Поиск",
+    "filter": "Фильтр",
+    "sort": "Сортировка",
+    "actions": "Действия",
+    "noResults": "Ничего не найдено",
+    "error": "Ошибка",
+    "success": "Успешно",
+    "confirm": "Подтвердить",
+    "yes": "Да",
+    "no": "Нет"
+  },
+  "auth": {
+    "login": "Вход",
+    "register": "Регистрация",
+    "logout": "Выйти",
+    "email": "Email",
+    "password": "Пароль",
+    "confirmPassword": "Подтвердите пароль",
+    "name": "Имя",
+    "forgotPassword": "Забыли пароль?",
+    "rememberMe": "Запомнить меня",
+    "noAccount": "Нет аккаунта?",
+    "hasAccount": "Уже есть аккаунт?",
+    "loginButton": "Войти",
+    "registerButton": "Зарегистрироваться",
+    "verifyEmail": "Подтвердите email",
+    "verifyEmailSent": "Письмо с подтверждением отправлено на ваш email",
+    "waitingActivation": "Ожидание активации",
+    "waitingActivationDesc": "Ваш аккаунт ожидает активации администратором"
+  },
+  "landing": {
+    "hero": {
+      "title": "D&D Assistant",
+      "subtitle": "Ваш помощник для живых настольных сессий",
+      "description": "Убираем бумажную волокиту, оставляем кубики, отыгрыш и кайф от совместной игры",
+      "cta": "Начать играть"
+    },
+    "features": {
+      "title": "Возможности",
+      "characterSheet": {
+        "title": "Лист персонажа",
+        "description": "Планшет или телефон вместо стопки бумаг. Автоматический расчёт всех модификаторов"
+      },
+      "battleTracker": {
+        "title": "Трекер битвы",
+        "description": "Инициатива, здоровье, состояния — всё под рукой у Мастера"
+      },
+      "displayClient": {
+        "title": "Большой экран",
+        "description": "Атмосферные сцены и музыка на ТВ в комнате"
+      },
+      "characterCreator": {
+        "title": "Создание персонажа",
+        "description": "Пошаговый мастер вместо двухчасового заполнения листа"
+      }
+    }
+  },
+  "player": {
+    "campaigns": {
+      "title": "Мои кампании",
+      "noCampaigns": "Вас пока не добавили ни в одну кампанию",
+      "selectCampaign": "Выберите кампанию"
+    },
+    "characters": {
+      "title": "Персонажи",
+      "createNew": "Создать персонажа",
+      "graveyard": "Кладбище",
+      "noCharacters": "У вас ещё нет персонажей в этой кампании"
+    },
+    "sheet": {
+      "level": "Уровень",
+      "experience": "Опыт",
+      "hp": "ОЗ",
+      "ac": "КД",
+      "speed": "Скорость",
+      "inspiration": "Вдохновение",
+      "proficiencyBonus": "Бонус мастерства",
+      "abilities": "Характеристики",
+      "savingThrows": "Спасброски",
+      "skills": "Навыки",
+      "attacks": "Атаки",
+      "spells": "Заклинания",
+      "inventory": "Инвентарь",
+      "features": "Особенности",
+      "description": "Описание"
+    },
+    "creator": {
+      "title": "Создание персонажа",
+      "stepRace": "Раса",
+      "stepClass": "Класс",
+      "stepAbilities": "Характеристики",
+      "stepSkills": "Навыки",
+      "stepEquipment": "Снаряжение",
+      "stepPersonality": "Личность",
+      "stepSummary": "Сводка",
+      "chooseRace": "Выберите расу",
+      "chooseClass": "Выберите класс",
+      "distributeAbilities": "Распределите характеристики",
+      "chooseSkills": "Выберите навыки",
+      "chooseEquipment": "Выберите снаряжение",
+      "enterDetails": "Введите данные персонажа",
+      "reviewCharacter": "Проверьте персонажа"
+    }
+  },
+  "dashboard": {
+    "title": "Панель управления",
+    "sidebar": {
+      "campaigns": "Кампании",
+      "ruleSystems": "Системы правил",
+      "settings": "Сеттинги",
+      "monsters": "Бестиарий",
+      "spells": "Заклинания",
+      "items": "Предметы",
+      "users": "Пользователи",
+      "displayControl": "Управление экраном"
+    },
+    "campaigns": {
+      "title": "Кампании",
+      "create": "Создать кампанию",
+      "edit": "Редактировать кампанию",
+      "sessions": "Сессии",
+      "players": "Игроки",
+      "encounters": "Встречи",
+      "notes": "Заметки",
+      "npcs": "NPC",
+      "randomTables": "Таблицы случайностей"
+    },
+    "battle": {
+      "title": "Трекер битвы",
+      "initiative": "Инициатива",
+      "round": "Раунд",
+      "turn": "Ход",
+      "rollInitiative": "Бросить инициативу",
+      "nextTurn": "Следующий ход",
+      "endBattle": "Завершить битву",
+      "addParticipant": "Добавить участника"
+    },
+    "users": {
+      "title": "Пользователи",
+      "activate": "Активировать",
+      "deactivate": "Деактивировать",
+      "makeGM": "Назначить Мастером",
+      "removeGM": "Убрать из Мастеров",
+      "status": {
+        "active": "Активен",
+        "inactive": "Неактивен",
+        "pending": "Ожидает"
+      },
+      "role": {
+        "owner": "Владелец",
+        "dm": "Мастер",
+        "player": "Игрок"
+      }
+    }
+  },
+  "display": {
+    "connecting": "Подключение к кампании...",
+    "selectCampaign": "Выберите кампанию для отображения",
+    "noActiveScene": "Нет активной сцены"
+  },
+  "dnd": {
+    "abilities": {
+      "strength": "Сила",
+      "dexterity": "Ловкость",
+      "constitution": "Телосложение",
+      "intelligence": "Интеллект",
+      "wisdom": "Мудрость",
+      "charisma": "Харизма"
+    },
+    "abilitiesShort": {
+      "strength": "СИЛ",
+      "dexterity": "ЛОВ",
+      "constitution": "ТЕЛ",
+      "intelligence": "ИНТ",
+      "wisdom": "МДР",
+      "charisma": "ХАР"
+    },
+    "skills": {
+      "acrobatics": "Акробатика",
+      "animal_handling": "Уход за животными",
+      "arcana": "Магия",
+      "athletics": "Атлетика",
+      "deception": "Обман",
+      "history": "История",
+      "insight": "Проницательность",
+      "intimidation": "Запугивание",
+      "investigation": "Расследование",
+      "medicine": "Медицина",
+      "nature": "Природа",
+      "perception": "Внимательность",
+      "performance": "Выступление",
+      "persuasion": "Убеждение",
+      "religion": "Религия",
+      "sleight_of_hand": "Ловкость рук",
+      "stealth": "Скрытность",
+      "survival": "Выживание"
+    },
+    "conditions": {
+      "blinded": "Ослеплён",
+      "charmed": "Очарован",
+      "deafened": "Оглушён",
+      "frightened": "Испуган",
+      "grappled": "Схвачен",
+      "incapacitated": "Недееспособен",
+      "invisible": "Невидим",
+      "paralyzed": "Парализован",
+      "petrified": "Окаменён",
+      "poisoned": "Отравлен",
+      "prone": "Сбит с ног",
+      "restrained": "Опутан",
+      "stunned": "Ошеломлён",
+      "unconscious": "Без сознания",
+      "exhaustion": "Истощение"
+    },
+    "schools": {
+      "abjuration": "Ограждение",
+      "conjuration": "Вызов",
+      "divination": "Прорицание",
+      "enchantment": "Очарование",
+      "evocation": "Воплощение",
+      "illusion": "Иллюзия",
+      "necromancy": "Некромантия",
+      "transmutation": "Преобразование"
+    },
+    "damageTypes": {
+      "acid": "Кислота",
+      "bludgeoning": "Дробящий",
+      "cold": "Холод",
+      "fire": "Огонь",
+      "force": "Силовое поле",
+      "lightning": "Молния",
+      "necrotic": "Некротический",
+      "piercing": "Колющий",
+      "poison": "Яд",
+      "psychic": "Психический",
+      "radiant": "Излучение",
+      "slashing": "Рубящий",
+      "thunder": "Звук"
+    },
+    "spellComponents": {
+      "verbal": "В",
+      "somatic": "С",
+      "material": "М"
+    },
+    "rest": {
+      "short": "Короткий отдых",
+      "long": "Продолжительный отдых"
+    },
+    "terms": {
+      "armorClass": "Класс Доспеха",
+      "hitPoints": "Очки Здоровья",
+      "hitDie": "Кость Здоровья",
+      "proficiencyBonus": "Бонус Мастерства",
+      "savingThrow": "Спасбросок",
+      "attackRoll": "Бросок атаки",
+      "damageRoll": "Бросок урона",
+      "spellSlot": "Ячейка заклинания",
+      "cantrip": "Заговор",
+      "concentration": "Концентрация",
+      "ritual": "Ритуал",
+      "initiative": "Инициатива",
+      "advantage": "Преимущество",
+      "disadvantage": "Помеха",
+      "inspiration": "Вдохновение",
+      "experiencePoints": "Очки Опыта",
+      "challengeRating": "Опасность",
+      "deathSave": "Спасбросок от смерти"
+    },
+    "currency": {
+      "cp": "мм",
+      "sp": "см",
+      "ep": "эм",
+      "gp": "зм",
+      "pp": "пм"
+    },
+    "units": {
+      "meters": "м",
+      "kilometers": "км",
+      "kilograms": "кг",
+      "grams": "г"
+    }
+  },
+  "errors": {
+    "generic": "Что-то пошло не так",
+    "notFound": "Страница не найдена",
+    "unauthorized": "Необходима авторизация",
+    "forbidden": "Доступ запрещён",
+    "validation": "Проверьте введённые данные",
+    "network": "Ошибка сети. Проверьте подключение к интернету"
+  }
+}

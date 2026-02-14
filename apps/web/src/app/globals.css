@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@theme {
+  /* D&D Assistant Color Palette */
+  --color-primary: #8B0000;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #C9A94E;
+  --color-secondary-foreground: #1a1a2e;
+
+  --color-background: #1a1a2e;
+  --color-foreground: #e0e0e0;
+
+  --color-card: #16213e;
+  --color-card-foreground: #e0e0e0;
+
+  --color-popover: #16213e;
+  --color-popover-foreground: #e0e0e0;
+
+  --color-muted: #2a2a4e;
+  --color-muted-foreground: #8892a4;
+
+  --color-accent: #2a2a4e;
+  --color-accent-foreground: #e0e0e0;
+
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+
+  --color-success: #48c715;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+
+  --color-border: #2a2a4e;
+  --color-input: #2a2a4e;
+  --color-ring: #8B0000;
+
+  /* Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Sidebar (Dashboard) */
+  --color-sidebar: #0f0f1e;
+  --color-sidebar-foreground: #e0e0e0;
+  --color-sidebar-border: #2a2a4e;
+  --color-sidebar-accent: #1a1a2e;
+  --color-sidebar-accent-foreground: #e0e0e0;
+  --color-sidebar-primary: #8B0000;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-ring: #8B0000;
+
+  /* Chart colors */
+  --color-chart-1: #8B0000;
+  --color-chart-2: #C9A94E;
+  --color-chart-3: #48c715;
+  --color-chart-4: #3b82f6;
+  --color-chart-5: #f59e0b;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-background);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-muted);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted-foreground);
+  }
+}
+
+@layer utilities {
+  /* D&D specific utilities */
+  .text-gold {
+    color: var(--color-secondary);
+  }
+
+  .bg-surface {
+    background-color: var(--color-card);
+  }
+
+  .border-gold {
+    border-color: var(--color-secondary);
+  }
+
+  /* HP bar gradient */
+  .hp-bar {
+    background: linear-gradient(90deg, var(--color-success) 0%, #2d8a0e 100%);
+  }
+
+  .hp-bar-danger {
+    background: linear-gradient(90deg, var(--color-destructive) 0%, #991b1b 100%);
+  }
+
+  /* Fantasy text shadow */
+  .text-shadow-fantasy {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Display client fullscreen */
+  .display-fullscreen {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+}
