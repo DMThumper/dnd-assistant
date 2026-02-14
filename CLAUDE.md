@@ -1503,7 +1503,8 @@ CREATE TABLE acts (
 );
 -- Акт группирует сессии в сюжетную арку
 
-CREATE TABLE sessions (
+-- game_sessions (not "sessions" to avoid Laravel conflict)
+CREATE TABLE game_sessions (
     id BIGSERIAL PRIMARY KEY,
     act_id BIGINT NOT NULL REFERENCES acts(id) ON DELETE CASCADE,
     number INTEGER NOT NULL,              -- порядковый номер внутри акта: #1, #2, #3
@@ -1514,11 +1515,11 @@ CREATE TABLE sessions (
     sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMP, updated_at TIMESTAMP
 );
--- session.campaign_id вычисляется через act.campaign_id
+-- campaign_id вычисляется через act.campaign_id
 
 CREATE TABLE scenes (
     id BIGSERIAL PRIMARY KEY,
-    session_id BIGINT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    game_session_id BIGINT NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
     name JSONB NOT NULL,                  -- {"ru": "Таверна «Сломанная наковальня»"}
     description JSONB,                    -- {"ru": "Описание для DM"}
 
@@ -1708,20 +1709,21 @@ $spell->settings()->syncWithoutDetaching([$eberron->id]);
 **Act** — Акт (сюжетная арка)
 - Translatable: `name`, `description`, `intro`, `epilogue`
 - Fields: `campaign_id`, `number` (порядковый), `status` (planned/active/completed), `sort_order`
-- Relations: belongsTo Campaign; hasMany Sessions
+- Relations: belongsTo Campaign; hasMany GameSessions
 - Группирует сессии в законченную историю с вступлением и эпилогом
 
-**Session** — Игровая сессия
+**GameSession** — Игровая сессия (table: `game_sessions`)
 - Translatable: `name`, `summary`
 - Fields: `act_id`, `number` (порядковый внутри акта), `status` (planned/active/completed), `played_at`, `sort_order`
 - Relations: belongsTo Act; hasMany Scenes
 - campaign доступна через `act.campaign`
+- Note: Модель называется `GameSession`, таблица `game_sessions` (избегаем конфликта с Laravel sessions)
 
 **Scene** — Сцена (узел в дереве)
 - Translatable: `name`, `description`
 - JSONB: `choices` (для type=choice — варианты и target_scene_id), `display` (lighting, weather, transition, overlay)
-- Fields: `session_id`, `parent_id` (дерево), `type` (intro/narrative/combat/social/choice/exploration/boss/outro/custom), `sort_order`
-- Relations: belongsTo Session, parent Scene, Soundtrack, Encounter; hasMany child Scenes, SceneConnections
+- Fields: `game_session_id`, `parent_id` (дерево), `type` (intro/narrative/combat/social/choice/exploration/boss/outro/custom), `sort_order`
+- Relations: belongsTo GameSession, parent Scene, Soundtrack, Encounter; hasMany child Scenes, SceneConnections
 - Media: `background` (image), `ambient_video`
 
 **SceneConnection** — Связь между сценами (для нелинейных графов)
