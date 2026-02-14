@@ -11,9 +11,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             OwnerSeeder::class,
+            RuleSystemsSeeder::class,
+            SettingsSeeder::class,
             // TODO: Add these seeders as content is created
-            // RuleSystemsSeeder::class,      // D&D 5e rule system
-            // SettingsSeeder::class,         // Eberron setting
             // RacesSeeder::class,
             // ClassesSeeder::class,
             // SpellsSeeder::class,
@@ -21,5 +21,12 @@ class DatabaseSeeder extends Seeder
             // MonstersSeeder::class,
             // RulesSeeder::class,
         ]);
+
+        // Development seeders (only in local environment)
+        if (app()->environment('local')) {
+            $this->call([
+                DevSeeder::class,
+            ]);
+        }
     }
 }
