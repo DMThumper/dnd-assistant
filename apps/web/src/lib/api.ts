@@ -5,6 +5,14 @@ import type {
   AuthResponse,
   VerifyEmailResponse,
 } from "@/types/auth";
+import type {
+  CampaignsResponse,
+  CampaignResponse,
+  CharactersResponse,
+  CharacterResponse,
+  ActiveCharacterResponse,
+  Character,
+} from "@/types/game";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
@@ -60,7 +68,8 @@ class ApiClient {
         ...(token && { Authorization: `Bearer ${token}` }),
         ...headers,
       },
-      credentials: "include",
+      // Note: We use Bearer tokens from localStorage, not cookies
+      // So we don't need credentials: "include" which would conflict with Access-Control-Allow-Origin: *
     };
 
     if (body && method !== "GET") {
@@ -188,11 +197,30 @@ class ApiClient {
 
   // Player endpoints
   async getPlayerCampaigns() {
-    return this.request<unknown[]>("/player/campaigns");
+    return this.request<CampaignsResponse>("/player/campaigns");
+  }
+
+  async getPlayerCampaign(campaignId: number) {
+    return this.request<CampaignResponse>(`/player/campaigns/${campaignId}`);
   }
 
   async getPlayerCharacters(campaignId: number) {
-    return this.request<unknown[]>(`/player/campaigns/${campaignId}/characters`);
+    return this.request<CharactersResponse>(`/player/campaigns/${campaignId}/characters`);
+  }
+
+  async getActiveCharacter(campaignId: number) {
+    return this.request<ActiveCharacterResponse>(`/player/campaigns/${campaignId}/characters/active`);
+  }
+
+  async getCharacter(characterId: number) {
+    return this.request<CharacterResponse>(`/player/characters/${characterId}`);
+  }
+
+  async updateCharacter(characterId: number, data: Partial<Pick<Character, "current_hp" | "temp_hp" | "inspiration" | "death_saves" | "class_resources" | "currency">>) {
+    return this.request<CharacterResponse>(`/player/characters/${characterId}`, {
+      method: "PATCH",
+      body: data,
+    });
   }
 
   // Backoffice endpoints

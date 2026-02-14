@@ -4,10 +4,12 @@ namespace Database\Seeders;
 
 use App\Models\Act;
 use App\Models\Campaign;
+use App\Models\Character;
 use App\Models\GameSession;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * Development seeder - only runs in local environment
@@ -24,21 +26,24 @@ class DevSeeder extends Seeder
 
         $this->command->info('Running development seeders...');
 
-        $this->seedSampleCampaign();
+        $campaign = $this->seedSampleCampaign();
+        if ($campaign) {
+            $this->seedTestPlayers($campaign);
+        }
     }
 
-    private function seedSampleCampaign(): void
+    private function seedSampleCampaign(): ?Campaign
     {
         $owner = User::whereHas('roles', fn($q) => $q->where('name', 'owner'))->first();
         if (!$owner) {
             $this->command->warn('Owner not found, skipping sample campaign.');
-            return;
+            return null;
         }
 
         $eberron = Setting::where('slug', 'eberron')->first();
         if (!$eberron) {
             $this->command->warn('Eberron setting not found, skipping sample campaign.');
-            return;
+            return null;
         }
 
         // Create sample campaign
@@ -150,5 +155,173 @@ class DevSeeder extends Seeder
         );
 
         $this->command->info('Sample campaign with acts and sessions seeded.');
+
+        return $campaign;
+    }
+
+    private function seedTestPlayers(Campaign $campaign): void
+    {
+        // Create test player 1 - Torin (Dwarf Fighter)
+        $player1 = User::updateOrCreate(
+            ['email' => 'player@test.com'],
+            [
+                'name' => 'Тестовый Игрок',
+                'password' => Hash::make('123'),
+                'email_verified_at' => now(),
+                'is_active' => true,
+            ]
+        );
+        $player1->assignRole('player');
+
+        // Add player to campaign
+        if (!$campaign->hasPlayer($player1)) {
+            $campaign->players()->attach($player1->id, ['joined_at' => now()]);
+        }
+
+        // Create character for player 1
+        Character::updateOrCreate(
+            ['user_id' => $player1->id, 'campaign_id' => $campaign->id, 'name->ru' => 'Торин Дубощит'],
+            [
+                'name' => ['ru' => 'Торин Дубощит'],
+                'backstory' => ['ru' => 'Бывший кузнец из клана Дубощитов. Покинул родные горы после нападения орков и теперь ищет приключений в Шарне.'],
+                'race_slug' => 'dwarf',
+                'class_slug' => 'fighter',
+                'level' => 3,
+                'experience_points' => 900,
+                'abilities' => [
+                    'strength' => 16,
+                    'dexterity' => 12,
+                    'constitution' => 16,
+                    'intelligence' => 10,
+                    'wisdom' => 13,
+                    'charisma' => 8,
+                ],
+                'current_hp' => 31,
+                'max_hp' => 31,
+                'temp_hp' => 0,
+                'armor_class' => 18,
+                'speed' => ['walk' => 7.5], // 25 ft in meters
+                'inspiration' => false,
+                'skill_proficiencies' => ['athletics', 'intimidation', 'perception'],
+                'skill_expertise' => [],
+                'saving_throw_proficiencies' => ['strength', 'constitution'],
+                'proficiencies' => [
+                    'armor' => ['light', 'medium', 'heavy', 'shields'],
+                    'weapons' => ['simple', 'martial'],
+                    'tools' => ['кузнечные инструменты'],
+                    'languages' => ['Общий', 'Дварфский'],
+                ],
+                'features' => [
+                    ['source' => 'race', 'name' => 'Тёмное зрение', 'description' => 'Видите в темноте на 18 м'],
+                    ['source' => 'race', 'name' => 'Дварфская стойкость', 'description' => 'Преимущество на спасброски от яда'],
+                    ['source' => 'class', 'name' => 'Боевой стиль: Защита', 'description' => '+1 КД в доспехах'],
+                    ['source' => 'class', 'name' => 'Второе дыхание', 'description' => '1d10+3 ОЗ бонусным действием'],
+                    ['source' => 'class', 'name' => 'Всплеск действий', 'description' => 'Дополнительное действие 1/отдых'],
+                ],
+                'class_resources' => [
+                    ['name' => 'Второе дыхание', 'current' => 1, 'max' => 1, 'recharge' => 'short_rest'],
+                    ['name' => 'Всплеск действий', 'current' => 1, 'max' => 1, 'recharge' => 'short_rest'],
+                ],
+                'currency' => ['cp' => 0, 'sp' => 15, 'ep' => 0, 'gp' => 42, 'pp' => 0],
+                'is_alive' => true,
+            ]
+        );
+
+        $this->command->info("Test player '{$player1->name}' created with character 'Торин Дубощит'.");
+
+        // Create test player 2 with multiple characters (one dead)
+        $player2 = User::updateOrCreate(
+            ['email' => 'player2@test.com'],
+            [
+                'name' => 'Второй Игрок',
+                'password' => Hash::make('123'),
+                'email_verified_at' => now(),
+                'is_active' => true,
+            ]
+        );
+        $player2->assignRole('player');
+
+        if (!$campaign->hasPlayer($player2)) {
+            $campaign->players()->attach($player2->id, ['joined_at' => now()]);
+        }
+
+        // Dead character (for graveyard)
+        Character::updateOrCreate(
+            ['user_id' => $player2->id, 'campaign_id' => $campaign->id, 'name->ru' => 'Гимли Каменнолобый'],
+            [
+                'name' => ['ru' => 'Гимли Каменнолобый'],
+                'backstory' => ['ru' => 'Отважный воин, павший в бою с гоблинами.'],
+                'race_slug' => 'dwarf',
+                'class_slug' => 'barbarian',
+                'level' => 2,
+                'experience_points' => 450,
+                'abilities' => [
+                    'strength' => 17,
+                    'dexterity' => 14,
+                    'constitution' => 15,
+                    'intelligence' => 8,
+                    'wisdom' => 10,
+                    'charisma' => 10,
+                ],
+                'current_hp' => 0,
+                'max_hp' => 24,
+                'armor_class' => 14,
+                'speed' => ['walk' => 7.5],
+                'is_alive' => false,
+                'death_info' => [
+                    'killed_by' => 'Гоблин-вожак',
+                    'killing_blow' => '12 урона рубящего',
+                    'cause' => 'combat',
+                    'session_number' => 2,
+                    'death_date' => now()->subDays(7)->toDateString(),
+                    'last_words' => 'За Морию!',
+                    'revived' => false,
+                ],
+                'stats' => [
+                    'sessions_played' => 2,
+                    'monsters_killed' => 5,
+                    'damage_dealt' => 87,
+                    'damage_taken' => 45,
+                    'critical_hits' => 2,
+                    'natural_ones' => 1,
+                ],
+            ]
+        );
+
+        // Alive character for player 2
+        Character::updateOrCreate(
+            ['user_id' => $player2->id, 'campaign_id' => $campaign->id, 'name->ru' => 'Эльминстер'],
+            [
+                'name' => ['ru' => 'Эльминстер'],
+                'backstory' => ['ru' => 'Молодой волшебник из академии Аундэйра, ищущий древние знания в Шарне.'],
+                'race_slug' => 'human',
+                'class_slug' => 'wizard',
+                'level' => 3,
+                'experience_points' => 900,
+                'abilities' => [
+                    'strength' => 8,
+                    'dexterity' => 14,
+                    'constitution' => 13,
+                    'intelligence' => 17,
+                    'wisdom' => 12,
+                    'charisma' => 10,
+                ],
+                'current_hp' => 18,
+                'max_hp' => 18,
+                'armor_class' => 12,
+                'speed' => ['walk' => 9],
+                'skill_proficiencies' => ['arcana', 'history', 'investigation'],
+                'saving_throw_proficiencies' => ['intelligence', 'wisdom'],
+                'features' => [
+                    ['source' => 'class', 'name' => 'Магия', 'description' => 'Подготовка и использование заклинаний волшебника'],
+                    ['source' => 'class', 'name' => 'Магическое восстановление', 'description' => 'Восстановление ячеек на коротком отдыхе'],
+                    ['source' => 'class', 'name' => 'Школа Воплощения', 'description' => 'Специализация в школе Воплощения'],
+                ],
+                'currency' => ['cp' => 0, 'sp' => 5, 'ep' => 0, 'gp' => 28, 'pp' => 0],
+                'is_alive' => true,
+            ]
+        );
+
+        $this->command->info("Test player '{$player2->name}' created with 2 characters (1 alive, 1 dead).");
     }
 }

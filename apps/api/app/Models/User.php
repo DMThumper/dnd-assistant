@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -73,6 +74,25 @@ class User extends Authenticatable implements MustVerifyEmail
     public function characters(): HasMany
     {
         return $this->hasMany(Character::class, 'user_id');
+    }
+
+    /**
+     * Get campaigns where user is a player (many-to-many)
+     */
+    public function campaigns(): BelongsToMany
+    {
+        return $this->belongsToMany(Campaign::class, 'campaign_player')
+            ->withPivot('joined_at')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get all campaigns user has access to (owned + player)
+     */
+    public function accessibleCampaigns()
+    {
+        return Campaign::where('user_id', $this->id)
+            ->orWhereHas('players', fn ($query) => $query->where('users.id', $this->id));
     }
 
     /**

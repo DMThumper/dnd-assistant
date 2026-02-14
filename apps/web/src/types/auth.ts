@@ -42,6 +42,7 @@ export interface AuthResponse {
 
 export interface VerifyEmailResponse {
   message: string;
+  token?: string;
 }
 
 export type AuthError = {

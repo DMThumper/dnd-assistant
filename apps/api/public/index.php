@@ -3,16 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
-// Handle CORS headers for all requests
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin');
-
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+// CORS is handled by:
+// - Local dev: Laravel CORS middleware (config/cors.php with paths => ['api/*'])
+// - Production: Caddy/Coolify proxy (config/cors.php with paths => [])
 
 define('LARAVEL_START', microtime(true));
 

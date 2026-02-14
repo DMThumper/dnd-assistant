@@ -15,5 +15,11 @@ export default function RootLayout({
 }: {
   children: ReactNode;
 }) {
-  return children;
+  return (
+    <html lang="ru" className="dark" suppressHydrationWarning>
+      <body className="min-h-screen bg-background font-sans antialiased">
+        {children}
+      </body>
+    </html>
+  );
 }

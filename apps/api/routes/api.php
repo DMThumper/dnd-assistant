@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Backoffice\CampaignPlayerController;
+use App\Http\Controllers\Api\V1\Player\CampaignController as PlayerCampaignController;
+use App\Http\Controllers\Api\V1\Player\CharacterController as PlayerCharacterController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -56,9 +59,17 @@ Route::prefix('v1')->group(function () {
         // Player routes (role: player, dm, owner)
         // =====================================================================
         Route::prefix('player')->group(function () {
-            // Route::get('campaigns', [PlayerCampaignController::class, 'index']);
-            // Route::get('characters', [PlayerCharacterController::class, 'index']);
-            // Route::apiResource('character', PlayerCharacterController::class);
+            // Campaigns
+            Route::get('campaigns', [PlayerCampaignController::class, 'index']);
+            Route::get('campaigns/{campaign}', [PlayerCampaignController::class, 'show']);
+
+            // Characters
+            Route::get('campaigns/{campaign}/characters', [PlayerCharacterController::class, 'index']);
+            Route::get('campaigns/{campaign}/characters/active', [PlayerCharacterController::class, 'active']);
+            Route::get('characters/{character}', [PlayerCharacterController::class, 'show']);
+            Route::patch('characters/{character}', [PlayerCharacterController::class, 'update']);
+
+            // Spells (read-only)
             // Route::get('spells', [PlayerSpellController::class, 'index']);
             // Route::get('items', [PlayerItemController::class, 'index']);
         });
@@ -91,17 +102,21 @@ Route::prefix('v1')->group(function () {
             // Campaigns
             // -----------------------------------------------------------------
             // Route::apiResource('campaigns', CampaignController::class);
-            // Route::prefix('campaigns/{campaign}')->group(function () {
-            //     Route::apiResource('sessions', SessionController::class);
-            //     Route::apiResource('sessions/{session}/scenes', SceneController::class);
-            //     Route::apiResource('encounters', EncounterController::class);
-            //     Route::apiResource('npcs', NpcController::class);
-            //     Route::apiResource('notes', NoteController::class);
-            //     Route::apiResource('random-tables', RandomTableController::class);
-            //     Route::get('players', [CampaignPlayerController::class, 'index']);
-            //     Route::post('players/{user}/invite', [CampaignPlayerController::class, 'invite']);
-            //     Route::delete('players/{user}', [CampaignPlayerController::class, 'remove']);
-            // });
+            Route::prefix('campaigns/{campaign}')->group(function () {
+                // Players management
+                Route::get('players', [CampaignPlayerController::class, 'index']);
+                Route::get('players/available', [CampaignPlayerController::class, 'available']);
+                Route::post('players/{user}/invite', [CampaignPlayerController::class, 'invite']);
+                Route::delete('players/{user}', [CampaignPlayerController::class, 'remove']);
+
+                // TODO: Sessions, encounters, npcs, notes, random-tables
+                // Route::apiResource('sessions', SessionController::class);
+                // Route::apiResource('sessions/{session}/scenes', SceneController::class);
+                // Route::apiResource('encounters', EncounterController::class);
+                // Route::apiResource('npcs', NpcController::class);
+                // Route::apiResource('notes', NoteController::class);
+                // Route::apiResource('random-tables', RandomTableController::class);
+            });
 
             // -----------------------------------------------------------------
             // Global Content (monsters, spells, items)

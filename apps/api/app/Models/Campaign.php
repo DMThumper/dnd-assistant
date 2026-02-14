@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Spatie\Translatable\HasTranslations;
@@ -114,5 +115,85 @@ class Campaign extends Model
     public function getAbilityMethod(): string
     {
         return $this->settings['ability_method'] ?? 'point_buy';
+    }
+
+    /**
+     * Players in this campaign (many-to-many)
+     */
+    public function players(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'campaign_player')
+            ->withPivot('joined_at')
+            ->withTimestamps();
+    }
+
+    /**
+     * Characters in this campaign
+     */
+    public function characters(): HasMany
+    {
+        return $this->hasMany(Character::class);
+    }
+
+    /**
+     * Check if a user is a player in this campaign
+     */
+    public function hasPlayer(User $user): bool
+    {
+        return $this->players()->where('users.id', $user->id)->exists();
+    }
+
+    /**
+     * Check if a user has access to this campaign (DM or player)
+     */
+    public function userHasAccess(User $user): bool
+    {
+        return $this->user_id === $user->id || $this->hasPlayer($user);
+    }
+
+    /**
+     * Format for API response
+     */
+    public function formatForApi(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->getTranslation('name', 'ru'),
+            'description' => $this->getTranslation('description', 'ru'),
+            'slug' => $this->slug,
+            'status' => $this->status,
+            'settings' => $this->settings,
+            'setting' => $this->setting ? [
+                'id' => $this->setting->id,
+                'name' => $this->setting->getTranslation('name', 'ru'),
+                'slug' => $this->setting->slug,
+            ] : null,
+            'owner' => [
+                'id' => $this->owner->id,
+                'name' => $this->owner->name,
+            ],
+            'players_count' => $this->players()->count(),
+            'characters_count' => $this->characters()->where('is_alive', true)->count(),
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
+        ];
+    }
+
+    /**
+     * Format for player API (includes user's characters)
+     */
+    public function formatForPlayerApi(User $user): array
+    {
+        $data = $this->formatForApi();
+        $data['my_characters'] = $this->characters()
+            ->where('user_id', $user->id)
+            ->get()
+            ->map(fn (Character $character) => $character->formatForApi())
+            ->toArray();
+        $data['my_alive_characters_count'] = $this->characters()
+            ->where('user_id', $user->id)
+            ->where('is_alive', true)
+            ->count();
+        return $data;
     }
 }
