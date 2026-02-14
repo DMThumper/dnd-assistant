@@ -36,6 +36,9 @@ class AppServiceProvider extends ServiceProvider
             'write:content' => 'Create, update, delete game content',
             'read:users' => 'Read users',
             'write:users' => 'Create, update, delete users',
+            'read:encounters' => 'Read encounters',
+            'write:encounters' => 'Create, update, delete encounters',
+            'manage:displays' => 'Manage display clients',
         ]);
 
         // Register custom S3 driver for buckets with "Bucket owner enforced" (no ACLs)

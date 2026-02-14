@@ -8,23 +8,15 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { api } from "@/lib/api";
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  email_verified_at: string | null;
-  is_active: boolean;
-  roles: string[];
-}
+import { useRouter } from "next/navigation";
+import { api, ApiClientError } from "@/lib/api";
+import type { User } from "@/types/auth";
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ requiresVerification: boolean }>;
   register: (
     name: string,
     email: string,
@@ -34,50 +26,46 @@ interface AuthContextType {
   logout: () => Promise<void>;
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
+  hasBackofficeAccess: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = "dnd-auth-token";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
-  const fetchUser = useCallback(async (authToken: string) => {
+  const fetchUser = useCallback(async () => {
+    const token = api.getToken();
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      api.setToken(authToken);
       const response = await api.me();
-      const userData = response.data as { user: User };
-      setUser(userData.user);
-    } catch {
-      // Token invalid, clear it
-      localStorage.removeItem(TOKEN_KEY);
-      api.setToken(null);
-      setToken(null);
-      setUser(null);
+      setUser(response.data.user);
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 401) {
+        api.setToken(null);
+        setUser(null);
+      }
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem(TOKEN_KEY);
-    if (storedToken) {
-      setToken(storedToken);
-      void fetchUser(storedToken).finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
-    }
+    void fetchUser();
   }, [fetchUser]);
 
   const login = async (email: string, password: string) => {
     const response = await api.login(email, password);
-    const { token: newToken, user: userData } = response.data;
+    const { user: userData } = response.data;
 
-    localStorage.setItem(TOKEN_KEY, newToken);
-    api.setToken(newToken);
-    setToken(newToken);
-    setUser(userData as User);
+    setUser(userData);
+    return { requiresVerification: false };
   };
 
   const register = async (
@@ -93,10 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.logout();
     } finally {
-      localStorage.removeItem(TOKEN_KEY);
-      api.setToken(null);
-      setToken(null);
       setUser(null);
+      router.push("/login");
     }
   };
 
@@ -108,11 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return roles.some((role) => hasRole(role));
   };
 
+  const hasBackofficeAccess = user?.backoffice_access ?? false;
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
         isLoading,
         isAuthenticated: !!user,
         login,
@@ -120,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         hasRole,
         hasAnyRole,
+        hasBackofficeAccess,
       }}
     >
       {children}

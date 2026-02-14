@@ -80,7 +80,22 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function sendEmailVerificationNotification(): void
     {
-        // TODO: Create VerifyEmailNotification
-        // $this->notify(new \App\Notifications\VerifyEmailNotification());
+        $this->notify(new \App\Notifications\VerifyEmailNotification());
+    }
+
+    /**
+     * Check if user has backoffice access (owner or dm)
+     */
+    public function hasBackofficeAccess(): bool
+    {
+        return $this->hasAnyRole(['owner', 'dm']);
+    }
+
+    /**
+     * Check if user can manage other users' roles
+     */
+    public function canManageRoles(): bool
+    {
+        return $this->hasRole('owner');
     }
 }

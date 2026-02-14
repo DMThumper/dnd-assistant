@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -22,13 +23,14 @@ Route::prefix('v1')->group(function () {
     // Auth routes (public)
     // =========================================================================
     Route::prefix('auth')->group(function () {
-        // Route::post('register', [AuthController::class, 'register']);
-        // Route::post('login', [AuthController::class, 'login']);
+        Route::post('register', [AuthController::class, 'register']);
+        Route::post('login', [AuthController::class, 'login']);
+        Route::post('resend-verification', [AuthController::class, 'resendVerification']);
 
         // Email verification
-        // Route::get('email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
-        //     ->middleware(['signed', 'throttle:6,1'])
-        //     ->name('verification.verify');
+        Route::get('email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
+            ->middleware(['signed', 'throttle:6,1'])
+            ->name('verification.verify');
     });
 
     // =========================================================================
@@ -43,10 +45,11 @@ Route::prefix('v1')->group(function () {
     // =========================================================================
     Route::middleware('auth:api')->group(function () {
 
-        // Auth
+        // Auth (protected)
         Route::prefix('auth')->group(function () {
-            // Route::post('logout', [AuthController::class, 'logout']);
-            // Route::get('me', [AuthController::class, 'me']);
+            Route::post('logout', [AuthController::class, 'logout']);
+            Route::post('refresh', [AuthController::class, 'refresh']);
+            Route::get('me', [AuthController::class, 'me']);
         });
 
         // =====================================================================
