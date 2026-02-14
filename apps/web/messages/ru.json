@@ -71,7 +71,14 @@
     "campaigns": {
       "title": "Мои кампании",
       "noCampaigns": "Вас пока не добавили ни в одну кампанию",
-      "selectCampaign": "Выберите кампанию"
+      "waitForInvite": "Попросите Мастера добавить вас в кампанию",
+      "selectCampaign": "Выберите кампанию",
+      "dm": "Мастер",
+      "characters": "персонажей",
+      "lastPlayed": "Последняя игра",
+      "today": "сегодня",
+      "yesterday": "вчера",
+      "daysAgo": "{days} дн. назад"
     },
     "characters": {
       "title": "Персонажи",
@@ -128,14 +135,24 @@
     },
     "campaigns": {
       "title": "Кампании",
+      "subtitle": "Управление вашими кампаниями",
       "create": "Создать кампанию",
+      "createFirst": "Создать первую кампанию",
       "edit": "Редактировать кампанию",
-      "sessions": "Сессии",
+      "manage": "Управление",
+      "noCampaigns": "У вас пока нет кампаний",
+      "acts": "актов",
+      "sessions": "сессий",
       "players": "Игроки",
       "encounters": "Встречи",
       "notes": "Заметки",
       "npcs": "NPC",
-      "randomTables": "Таблицы случайностей"
+      "randomTables": "Таблицы случайностей",
+      "status": {
+        "active": "Активна",
+        "paused": "На паузе",
+        "completed": "Завершена"
+      }
     },
     "battle": {
       "title": "Трекер битвы",
@@ -146,6 +163,31 @@
       "nextTurn": "Следующий ход",
       "endBattle": "Завершить битву",
       "addParticipant": "Добавить участника"
+    },
+    "displayControl": {
+      "title": "Управление экраном",
+      "description": "Подключение и управление дисплеем в комнате",
+      "pair": {
+        "title": "Подключить дисплей",
+        "description": "Введите код с экрана ТВ для подключения",
+        "selectCampaign": "Выберите кампанию",
+        "selectCampaignPlaceholder": "Кампания...",
+        "enterCode": "Код с экрана",
+        "connect": "Подключить"
+      },
+      "controls": {
+        "title": "Быстрые команды",
+        "description": "Управление подключённым дисплеем",
+        "changeScene": "Сменить сцену",
+        "changeMusic": "Сменить музыку",
+        "showText": "Показать текст",
+        "blackout": "Затемнение"
+      },
+      "connected": {
+        "title": "Подключённые дисплеи",
+        "description": "Активные дисплеи для ваших кампаний",
+        "noDisplays": "Нет подключённых дисплеев"
+      }
     },
     "users": {
       "title": "Пользователи",
@@ -166,9 +208,24 @@
     }
   },
   "display": {
-    "connecting": "Подключение к кампании...",
+    "connecting": "Подключение...",
     "selectCampaign": "Выберите кампанию для отображения",
-    "noActiveScene": "Нет активной сцены"
+    "noActiveScene": "Нет активной сцены",
+    "code": {
+      "label": "Код подключения",
+      "instruction": "Введите этот код в панели управления DM",
+      "expiresIn": "Код обновится через"
+    },
+    "paired": {
+      "title": "Подключено",
+      "campaign": "Кампания",
+      "waitingForDm": "Ожидание команды от Мастера..."
+    },
+    "errors": {
+      "title": "Ошибка подключения",
+      "connectionFailed": "Не удалось подключиться к серверу"
+    },
+    "retry": "Попробовать снова"
   },
   "dnd": {
     "abilities": {
