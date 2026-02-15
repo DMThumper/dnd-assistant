@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Backoffice\CampaignPlayerController;
+use App\Http\Controllers\Api\V1\Backoffice\CharacterController as BackofficeCharacterController;
+use App\Http\Controllers\Api\V1\Backoffice\ClassController as BackofficeClassController;
+use App\Http\Controllers\Api\V1\Backoffice\RaceController as BackofficeRaceController;
+use App\Http\Controllers\Api\V1\Backoffice\MonsterController as BackofficeMonsterController;
+use App\Http\Controllers\Api\V1\Backoffice\SpellController as BackofficeSpellController;
 use App\Http\Controllers\Api\V1\Player\CampaignController as PlayerCampaignController;
 use App\Http\Controllers\Api\V1\Player\CharacterController as PlayerCharacterController;
 use Illuminate\Support\Facades\Route;
@@ -66,8 +71,17 @@ Route::prefix('v1')->group(function () {
             // Characters
             Route::get('campaigns/{campaign}/characters', [PlayerCharacterController::class, 'index']);
             Route::get('campaigns/{campaign}/characters/active', [PlayerCharacterController::class, 'active']);
+            Route::get('campaigns/{campaign}/characters/creation-data', [PlayerCharacterController::class, 'creationData']);
+            Route::post('campaigns/{campaign}/characters', [PlayerCharacterController::class, 'store']);
             Route::get('characters/{character}', [PlayerCharacterController::class, 'show']);
             Route::patch('characters/{character}', [PlayerCharacterController::class, 'update']);
+            Route::post('characters/{character}/activate', [PlayerCharacterController::class, 'activate']);
+            Route::delete('characters/{character}', [PlayerCharacterController::class, 'destroy']);
+
+            // Level up
+            Route::get('characters/{character}/level-up/check', [PlayerCharacterController::class, 'checkLevelUp']);
+            Route::get('characters/{character}/level-up/options', [PlayerCharacterController::class, 'levelUpOptions']);
+            Route::post('characters/{character}/level-up', [PlayerCharacterController::class, 'levelUp']);
 
             // Spells (read-only)
             // Route::get('spells', [PlayerSpellController::class, 'index']);
@@ -109,6 +123,15 @@ Route::prefix('v1')->group(function () {
                 Route::post('players/{user}/invite', [CampaignPlayerController::class, 'invite']);
                 Route::delete('players/{user}', [CampaignPlayerController::class, 'remove']);
 
+                // Characters management (DM can view all, activate/deactivate, kill)
+                Route::get('characters', [BackofficeCharacterController::class, 'index']);
+                Route::post('characters/{character}/activate', [BackofficeCharacterController::class, 'activate']);
+                Route::post('characters/{character}/deactivate', [BackofficeCharacterController::class, 'deactivate']);
+                Route::post('characters/{character}/kill', [BackofficeCharacterController::class, 'kill']);
+
+                // XP management (award to multiple characters)
+                Route::post('characters/award-xp', [BackofficeCharacterController::class, 'awardXp']);
+
                 // TODO: Sessions, encounters, npcs, notes, random-tables
                 // Route::apiResource('sessions', SessionController::class);
                 // Route::apiResource('sessions/{session}/scenes', SceneController::class);
@@ -119,10 +142,40 @@ Route::prefix('v1')->group(function () {
             });
 
             // -----------------------------------------------------------------
-            // Global Content (monsters, spells, items)
+            // Character Management (DM operations on individual characters)
             // -----------------------------------------------------------------
-            // Route::apiResource('monsters', MonsterController::class);
-            // Route::apiResource('spells', SpellController::class);
+            Route::prefix('characters/{character}')->group(function () {
+                Route::post('modify-hp', [BackofficeCharacterController::class, 'modifyHp']);
+                Route::post('modify-conditions', [BackofficeCharacterController::class, 'modifyConditions']);
+                Route::post('custom-rules', [BackofficeCharacterController::class, 'customRules']);
+                Route::post('give-item', [BackofficeCharacterController::class, 'giveItem']);
+                Route::post('modify-currency', [BackofficeCharacterController::class, 'modifyCurrency']);
+                Route::post('toggle-inspiration', [BackofficeCharacterController::class, 'toggleInspiration']);
+            });
+
+            // -----------------------------------------------------------------
+            // Global Content (classes, races, monsters, spells, items)
+            // -----------------------------------------------------------------
+            // Character Classes
+            Route::get('classes/settings', [BackofficeClassController::class, 'settings']);
+            Route::apiResource('classes', BackofficeClassController::class)->parameters(['classes' => 'class']);
+
+            // Races
+            Route::get('races/settings', [BackofficeRaceController::class, 'settings']);
+            Route::get('races/parents', [BackofficeRaceController::class, 'parents']);
+            Route::apiResource('races', BackofficeRaceController::class);
+
+            // Monsters
+            Route::get('monsters/settings', [BackofficeMonsterController::class, 'settings']);
+            Route::get('monsters/types', [BackofficeMonsterController::class, 'types']);
+            Route::apiResource('monsters', BackofficeMonsterController::class);
+
+            // Spells
+            Route::get('spells/settings', [BackofficeSpellController::class, 'settings']);
+            Route::get('spells/schools', [BackofficeSpellController::class, 'schools']);
+            Route::get('spells/classes', [BackofficeSpellController::class, 'classes']);
+            Route::apiResource('spells', BackofficeSpellController::class);
+
             // Route::apiResource('items', ItemController::class);
 
             // -----------------------------------------------------------------

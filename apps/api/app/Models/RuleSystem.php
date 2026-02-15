@@ -30,6 +30,10 @@ class RuleSystem extends Model
         'character_creation',
         'currency',
         'units',
+        // Level progression
+        'experience_table',
+        'multiclass_prerequisites',
+        'multiclass_proficiencies',
     ];
 
     protected function casts(): array
@@ -48,6 +52,10 @@ class RuleSystem extends Model
             'character_creation' => 'array',
             'currency' => 'array',
             'units' => 'array',
+            // Level progression
+            'experience_table' => 'array',
+            'multiclass_prerequisites' => 'array',
+            'multiclass_proficiencies' => 'array',
         ];
     }
 
@@ -81,5 +89,65 @@ class RuleSystem extends Model
     public function isMetric(): bool
     {
         return ($this->units['system'] ?? 'metric') === 'metric';
+    }
+
+    /**
+     * Get XP required for a specific level
+     */
+    public function getXpForLevel(int $level): int
+    {
+        $table = $this->experience_table ?? [];
+        return $table[(string) $level] ?? 0;
+    }
+
+    /**
+     * Get level for a given XP amount
+     */
+    public function getLevelForXp(int $xp): int
+    {
+        $table = $this->experience_table ?? [];
+        $level = 1;
+
+        foreach ($table as $lvl => $requiredXp) {
+            if ($xp >= $requiredXp) {
+                $level = (int) $lvl;
+            } else {
+                break;
+            }
+        }
+
+        return $level;
+    }
+
+    /**
+     * Check if XP allows for level up
+     */
+    public function canLevelUp(int $currentLevel, int $xp): bool
+    {
+        $maxLevel = $this->level_range['max'] ?? 20;
+        if ($currentLevel >= $maxLevel) {
+            return false;
+        }
+
+        $nextLevelXp = $this->getXpForLevel($currentLevel + 1);
+        return $xp >= $nextLevelXp;
+    }
+
+    /**
+     * Get multiclass prerequisites for a class
+     */
+    public function getMulticlassPrerequisites(string $classSlug): ?array
+    {
+        $prereqs = $this->multiclass_prerequisites ?? [];
+        return $prereqs[$classSlug] ?? null;
+    }
+
+    /**
+     * Get proficiencies gained when multiclassing into a class
+     */
+    public function getMulticlassProficiencies(string $classSlug): array
+    {
+        $profs = $this->multiclass_proficiencies ?? [];
+        return $profs[$classSlug] ?? [];
     }
 }

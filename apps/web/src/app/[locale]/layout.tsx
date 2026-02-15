@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { locales, type Locale } from "@/lib/i18n";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { WebSocketProvider } from "@/contexts/WebSocketContext";
 
 interface LocaleLayoutProps {
   children: ReactNode;
@@ -26,8 +27,10 @@ export default async function LocaleLayout({
   return (
     <NextIntlClientProvider messages={messages}>
       <AuthProvider>
-        {children}
-        <Toaster />
+        <WebSocketProvider>
+          {children}
+          <Toaster />
+        </WebSocketProvider>
       </AuthProvider>
     </NextIntlClientProvider>
   );

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(docker restart:*)",
+      "Bash(timeout:*)",
+      "Bash(npm run docker:up:*)",
+      "Bash(npm run dev:*)",
+      "Bash(ls -la \"C:\\\\Projects\\\\dnd-assistant\\\\apps\\\\api\\\\app\\\\Events\"\" 2>/dev/null || echo \"Events directory is empty or doesn 't exist \")",
+      "WebSearch",
+      "WebFetch(domain:5thsrd.org)",
+      "WebFetch(domain:github.com)",
+      "Bash(docker exec:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Campaign Control Center with tests\n\nTouch-friendly DM interface for managing active campaigns:\n\nFrontend:\n- Campaign Control page at /dashboard/campaign/[slug]/control\n- CharacterList and CharacterCard components with HP bars\n- CharacterControlPanel with 4 tabs \\(HP, Stats, Inventory, Spells\\)\n- HpControl with damage/healing/temp HP buttons\n- ConditionsControl for 20 D&D 5e conditions\n- CustomRulesControl for perks/afflictions with bonuses and penalties\n- ActionsPanel for quick actions \\(items, currency, inspiration, XP, kill\\)\n- View components: Abilities, Skills, SavingThrows, Inventory, Currency, Spells\n- XpAwardModal for awarding XP to one or all characters\n- UI components: Tabs, Dialog, Switch \\(Radix-based\\)\n\nBackend:\n- CharacterController with HP, conditions, custom rules, XP, items, currency endpoints\n- Factory classes for RuleSystem, Setting, Campaign, Character\n\nTests:\n- 30 tests covering all Campaign Control functionality\n- HP control, conditions, custom rules, XP award, currency, inspiration\n- Kill/activate/deactivate character with edge cases\n- Access control \\(DM vs player permissions\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+    ]
+  }
+}

@@ -46,6 +46,8 @@ const mainNavItems: NavItem[] = [
 ];
 
 const contentNavItems: NavItem[] = [
+  { href: "/dashboard/classes", icon: Swords, label: "Классы" },
+  { href: "/dashboard/races", icon: Users, label: "Расы" },
   { href: "/dashboard/monsters", icon: Bug, label: "Бестиарий" },
   { href: "/dashboard/spells", icon: Wand2, label: "Заклинания" },
   { href: "/dashboard/items", icon: Package, label: "Предметы" },

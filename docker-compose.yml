@@ -64,6 +64,39 @@ services:
     networks:
       - default
 
+  reverb:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.dev
+    container_name: dnd_reverb
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./apps/api:/var/www/html
+      - api_vendor:/var/www/html/vendor
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-dnd_assistant}
+      DB_USERNAME: ${DB_USERNAME:-dnd_user}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REVERB_HOST: "0.0.0.0"
+      REVERB_PORT: 8080
+      REVERB_APP_ID: dnd-assistant
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-dnd-reverb-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-dnd-reverb-secret}
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    depends_on:
+      - api
+    networks:
+      - default
+
   # ===========================================
   # Databases & Infrastructure
   # ===========================================

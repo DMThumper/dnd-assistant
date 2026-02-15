@@ -150,6 +150,92 @@ class RuleSystemsSeeder extends Seeder
                         'lb_to_kg' => 0.45,
                     ],
                 ],
+
+                // D&D 5e XP Table (SRD)
+                'experience_table' => [
+                    '1' => 0,
+                    '2' => 300,
+                    '3' => 900,
+                    '4' => 2700,
+                    '5' => 6500,
+                    '6' => 14000,
+                    '7' => 23000,
+                    '8' => 34000,
+                    '9' => 48000,
+                    '10' => 64000,
+                    '11' => 85000,
+                    '12' => 100000,
+                    '13' => 120000,
+                    '14' => 140000,
+                    '15' => 165000,
+                    '16' => 195000,
+                    '17' => 225000,
+                    '18' => 265000,
+                    '19' => 305000,
+                    '20' => 355000,
+                ],
+
+                // Multiclass prerequisites (D&D 5e SRD)
+                'multiclass_prerequisites' => [
+                    'barbarian' => ['strength' => 13],
+                    'bard' => ['charisma' => 13],
+                    'cleric' => ['wisdom' => 13],
+                    'druid' => ['wisdom' => 13],
+                    'fighter' => ['strength' => 13, 'or' => ['dexterity' => 13]],
+                    'monk' => ['dexterity' => 13, 'wisdom' => 13],
+                    'paladin' => ['strength' => 13, 'charisma' => 13],
+                    'ranger' => ['dexterity' => 13, 'wisdom' => 13],
+                    'rogue' => ['dexterity' => 13],
+                    'sorcerer' => ['charisma' => 13],
+                    'warlock' => ['charisma' => 13],
+                    'wizard' => ['intelligence' => 13],
+                ],
+
+                // Proficiencies gained when multiclassing into a class (D&D 5e SRD)
+                'multiclass_proficiencies' => [
+                    'barbarian' => [
+                        'armor' => ['shields'],
+                        'weapons' => ['simple', 'martial'],
+                    ],
+                    'bard' => [
+                        'armor' => ['light'],
+                        'skills' => 1, // One skill of choice
+                        'instruments' => 1,
+                    ],
+                    'cleric' => [
+                        'armor' => ['light', 'medium', 'shields'],
+                    ],
+                    'druid' => [
+                        'armor' => ['light', 'medium', 'shields'],
+                    ],
+                    'fighter' => [
+                        'armor' => ['light', 'medium', 'shields'],
+                        'weapons' => ['simple', 'martial'],
+                    ],
+                    'monk' => [
+                        'weapons' => ['simple', 'shortswords'],
+                    ],
+                    'paladin' => [
+                        'armor' => ['light', 'medium', 'shields'],
+                        'weapons' => ['simple', 'martial'],
+                    ],
+                    'ranger' => [
+                        'armor' => ['light', 'medium', 'shields'],
+                        'weapons' => ['simple', 'martial'],
+                        'skills' => 1,
+                    ],
+                    'rogue' => [
+                        'armor' => ['light'],
+                        'tools' => ['thieves_tools'],
+                        'skills' => 1,
+                    ],
+                    'sorcerer' => [],
+                    'warlock' => [
+                        'armor' => ['light'],
+                        'weapons' => ['simple'],
+                    ],
+                    'wizard' => [],
+                ],
             ]
         );
 

@@ -13,12 +13,12 @@ class DatabaseSeeder extends Seeder
             OwnerSeeder::class,
             RuleSystemsSeeder::class,
             SettingsSeeder::class,
+            RacesSeeder::class,
+            ClassesSeeder::class,
+            MonstersSeeder::class,
+            SpellsSeeder::class,
             // TODO: Add these seeders as content is created
-            // RacesSeeder::class,
-            // ClassesSeeder::class,
-            // SpellsSeeder::class,
             // ItemsSeeder::class,
-            // MonstersSeeder::class,
             // RulesSeeder::class,
         ]);
 

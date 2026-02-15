@@ -109,7 +109,7 @@ export default function PlayerLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col bg-background">
       {/* Top Header - Always visible */}
       <header className="sticky top-0 z-40 border-b border-border bg-card">
-        <div className="flex h-14 items-center justify-between px-4">
+        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <Link href="/player" className="flex items-center gap-2">
             <span className="text-lg font-bold text-primary">D&D</span>
             <span className="text-sm text-muted-foreground">Assistant</span>
@@ -154,7 +154,7 @@ export default function PlayerLayout({ children }: { children: ReactNode }) {
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1",
+        "mx-auto w-full max-w-2xl flex-1",
         showBottomNav && "pb-16" // Add padding for bottom nav
       )}>
         {children}
@@ -163,7 +163,7 @@ export default function PlayerLayout({ children }: { children: ReactNode }) {
       {/* Bottom Navigation - Only shown on character sheet views */}
       {showBottomNav && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card">
-          <div className="flex h-16 items-center justify-around px-2">
+          <div className="mx-auto flex h-16 max-w-2xl items-center justify-around px-2">
             {navItems.map((item) => {
               const isActive = isNavItemActive(item);
               return (

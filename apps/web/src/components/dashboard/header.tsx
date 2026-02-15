@@ -10,6 +10,7 @@ import {
   User,
   Settings,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -31,14 +33,9 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const router = useRouter();
+  const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-
-  // TODO: Replace with actual auth context
-  const user = {
-    name: "Dungeon Master",
-    email: "dm@example.com",
-    avatar: null as string | null,
-  };
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const getInitials = (name: string) => {
     return name
@@ -49,9 +46,16 @@ export function Header({ onMenuClick }: HeaderProps) {
       .slice(0, 2);
   };
 
-  const handleLogout = () => {
-    // TODO: Implement logout
-    router.push("/login");
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -129,12 +133,11 @@ export function Header({ onMenuClick }: HeaderProps) {
               className="flex items-center gap-2 text-zinc-100 hover:bg-white/10 px-2"
             >
               <Avatar className="h-8 w-8">
-                {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
                 <AvatarFallback className="bg-primary/20 text-primary text-sm font-medium">
-                  {getInitials(user.name)}
+                  {getInitials(user?.name || "DM")}
                 </AvatarFallback>
               </Avatar>
-              <span className="hidden md:inline-block font-medium">{user.name}</span>
+              <span className="hidden md:inline-block font-medium">{user?.name || "Мастер"}</span>
               <ChevronDown className="h-4 w-4 text-zinc-500 hidden md:inline-block" />
             </Button>
           </DropdownMenuTrigger>
@@ -144,8 +147,8 @@ export function Header({ onMenuClick }: HeaderProps) {
           >
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-zinc-500">{user.email}</p>
+                <p className="text-sm font-medium">{user?.name || "Мастер"}</p>
+                <p className="text-xs text-zinc-500">{user?.email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-zinc-700" />
@@ -160,9 +163,14 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuSeparator className="bg-zinc-700" />
             <DropdownMenuItem
               onClick={handleLogout}
+              disabled={isLoggingOut}
               className="hover:bg-white/10 cursor-pointer text-red-400 focus:text-red-400"
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              {isLoggingOut ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <LogOut className="mr-2 h-4 w-4" />
+              )}
               Выйти
             </DropdownMenuItem>
           </DropdownMenuContent>

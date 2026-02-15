@@ -39,8 +39,20 @@ class Character extends Model
         'class_resources',
         'currency',
         'is_alive',
+        'is_active',
         'death_info',
         'stats',
+        // Game state fields for real-time sync
+        'conditions',
+        'custom_rules',
+        'inventory',
+        'equipment',
+        'prepared_spells',
+        'known_spells',
+        'spell_slots_remaining',
+        'class_levels',
+        'subclasses',
+        'asi_choices',
     ];
 
     protected function casts(): array
@@ -60,7 +72,19 @@ class Character extends Model
             'death_info' => 'array',
             'stats' => 'array',
             'is_alive' => 'boolean',
+            'is_active' => 'boolean',
             'inspiration' => 'boolean',
+            // Game state fields for real-time sync
+            'conditions' => 'array',
+            'custom_rules' => 'array',
+            'inventory' => 'array',
+            'equipment' => 'array',
+            'prepared_spells' => 'array',
+            'known_spells' => 'array',
+            'spell_slots_remaining' => 'array',
+            'class_levels' => 'array',
+            'subclasses' => 'array',
+            'asi_choices' => 'array',
         ];
     }
 
@@ -125,12 +149,33 @@ class Character extends Model
     }
 
     /**
+     * Check if character is active (the currently playing character)
+     */
+    public function isActive(): bool
+    {
+        return $this->is_active;
+    }
+
+    /**
      * Check if character can be deleted.
-     * Characters that have participated in sessions cannot be deleted - only die.
+     * Dead characters cannot be deleted - they are part of campaign history (graveyard).
+     * Active characters cannot be deleted - must be deactivated first by DM.
+     * Characters that have participated in sessions cannot be deleted.
      * This preserves campaign history and prevents accidental deletion.
      */
     public function canBeDeleted(): bool
     {
+        // Dead characters are part of history - cannot be deleted
+        if (!$this->is_alive) {
+            return false;
+        }
+
+        // Active characters cannot be deleted - only DM can deactivate
+        if ($this->is_active) {
+            return false;
+        }
+
+        // Characters that played sessions are part of history
         $sessionsPlayed = $this->stats['sessions_played'] ?? 0;
         return $sessionsPlayed === 0;
     }
@@ -174,10 +219,22 @@ class Character extends Model
             'class_resources' => $this->class_resources,
             'currency' => $this->currency,
             'is_alive' => $this->is_alive,
+            'is_active' => $this->is_active,
             'death_info' => $this->death_info,
             'stats' => $this->stats,
             'can_be_deleted' => $this->canBeDeleted(),
             'campaign_id' => $this->campaign_id,
+            // Game state fields
+            'conditions' => $this->conditions ?? [],
+            'custom_rules' => $this->custom_rules ?? [],
+            'inventory' => $this->inventory ?? [],
+            'equipment' => $this->equipment ?? [],
+            'prepared_spells' => $this->prepared_spells ?? [],
+            'known_spells' => $this->known_spells ?? [],
+            'spell_slots_remaining' => $this->spell_slots_remaining ?? [],
+            'class_levels' => $this->class_levels ?? [],
+            'subclasses' => $this->subclasses ?? [],
+            'asi_choices' => $this->asi_choices ?? [],
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];
