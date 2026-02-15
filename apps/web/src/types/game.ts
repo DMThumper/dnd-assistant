@@ -128,6 +128,72 @@ export interface CharacterStats {
   gold_spent?: number;
 }
 
+// D&D Condition (standard conditions like poisoned, stunned)
+export interface Condition {
+  key: string;
+  name?: string;
+  source?: string;
+  duration?: number;
+  applied_at?: string;
+}
+
+// Custom Rule Effect (bonus or penalty)
+export interface CustomRuleEffect {
+  type: "bonus" | "penalty";
+  category: "skill" | "ability" | "saving_throw" | "attack" | "damage" | "ac" | "hp" | "speed" | "custom";
+  target?: string;
+  value?: number;
+  description?: string;
+  condition?: string;
+}
+
+// Custom Rule (perks, afflictions, curses, blessings)
+export interface CustomRule {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  effects: CustomRuleEffect[];
+  permanent: boolean;
+  duration?: string;
+  source?: string;
+  applied_at?: string;
+  notes?: string;
+}
+
+// Inventory Item
+export interface InventoryItem {
+  item_slug?: string;
+  name?: string;
+  custom?: boolean;
+  quantity: number;
+  notes?: string;
+}
+
+// Equipment slots
+export interface Equipment {
+  armor?: string | null;
+  main_hand?: string | null;
+  off_hand?: string | null;
+  ring_1?: string | null;
+  ring_2?: string | null;
+  amulet?: string | null;
+  cloak?: string | null;
+  boots?: string | null;
+  gloves?: string | null;
+  belt?: string | null;
+  helm?: string | null;
+}
+
+// ASI/Feat choice at level up
+export interface AsiChoice {
+  level: number;
+  type: "asi" | "feat";
+  choices?: Record<string, number>; // For ASI: {"strength": 2}
+  feat?: string; // For feat: slug
+}
+
 // Character
 export interface Character {
   id: number;
@@ -155,10 +221,22 @@ export interface Character {
   class_resources: ClassResource[];
   currency: Currency;
   is_alive: boolean;
+  is_active: boolean;
   death_info: DeathInfo | null;
   stats: CharacterStats;
   can_be_deleted: boolean;
   campaign_id: number;
+  // Game state fields for real-time sync
+  conditions: Condition[];
+  custom_rules: CustomRule[];
+  inventory: InventoryItem[];
+  equipment: Equipment;
+  prepared_spells: string[];
+  known_spells: string[];
+  spell_slots_remaining: Record<string, number>;
+  class_levels: Record<string, number>;
+  subclasses: Record<string, string>;
+  asi_choices: AsiChoice[];
   created_at: string;
   updated_at: string;
 }
@@ -197,4 +275,83 @@ export interface CampaignPlayer {
   is_active: boolean;
   joined_at: string;
   characters_count: number;
+}
+
+// ===========================================================================
+// Campaign Control Types (for DM character management)
+// ===========================================================================
+
+// HP modification types
+export type HpModificationType = "damage" | "healing" | "temp_hp" | "set";
+
+// HP modification request
+export interface HpModificationRequest {
+  amount: number;
+  type: HpModificationType;
+  source?: string;
+}
+
+// Condition modification request
+export interface ConditionModificationRequest {
+  action: "add" | "remove";
+  condition: Condition;
+}
+
+// Custom rule modification request
+export interface CustomRuleRequest {
+  action: "add" | "update" | "remove";
+  rule: CustomRule;
+}
+
+// XP award request
+export interface XpAwardRequest {
+  character_ids: number[] | "all_active";
+  amount: number;
+  reason?: string;
+}
+
+// XP award result
+export interface XpAwardResult {
+  awarded_to: number;
+  amount: number;
+  reason?: string;
+  characters: Array<{
+    id: number;
+    name: string;
+    previous_xp: number;
+    new_xp: number;
+    leveled_up: boolean;
+    new_level?: number;
+  }>;
+}
+
+// Give item request
+export interface GiveItemRequest {
+  item: InventoryItem;
+  quantity?: number;
+  source?: string;
+}
+
+// Currency modification request
+export interface CurrencyModificationRequest {
+  type: keyof Currency;
+  amount: number;
+}
+
+// Kill character request
+export interface KillCharacterRequest {
+  killed_by: string;
+  killing_blow?: string;
+  cause?: "combat" | "trap" | "fall" | "spell" | "other";
+  last_words?: string;
+}
+
+// Campaign characters list response (for backoffice)
+export interface CampaignCharactersResponse {
+  characters: Character[];
+  campaign: {
+    id: number;
+    name: string;
+    slug: string;
+  };
 }

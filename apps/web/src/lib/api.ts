@@ -12,7 +12,46 @@ import type {
   CharacterResponse,
   ActiveCharacterResponse,
   Character,
+  CampaignCharactersResponse,
+  HpModificationType,
+  Condition,
+  CustomRule,
+  XpAwardResult,
+  InventoryItem,
+  Currency,
+  KillCharacterRequest,
 } from "@/types/game";
+import type {
+  CharacterCreationData,
+  CreateCharacterRequest,
+} from "@/types/character-creation";
+import type {
+  ClassesResponse,
+  ClassDetailResponse,
+  ClassResponse,
+  CreateClassRequest,
+  UpdateClassRequest,
+  SettingsListResponse,
+  RacesResponse,
+  RaceDetailResponse,
+  RaceResponse,
+  CreateRaceRequest,
+  UpdateRaceRequest,
+  ParentRacesResponse,
+  MonstersResponse,
+  MonsterDetailResponse,
+  MonsterResponse,
+  CreateMonsterRequest,
+  UpdateMonsterRequest,
+  MonsterTypesResponse,
+  SpellsResponse,
+  SpellDetailResponse,
+  SpellResponse,
+  CreateSpellRequest,
+  UpdateSpellRequest,
+  SpellSchoolsResponse,
+  SpellClassesResponse,
+} from "@/types/backoffice";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
@@ -223,6 +262,29 @@ class ApiClient {
     });
   }
 
+  async getCharacterCreationData(campaignId: number) {
+    return this.request<CharacterCreationData>(`/player/campaigns/${campaignId}/characters/creation-data`);
+  }
+
+  async createCharacter(campaignId: number, data: CreateCharacterRequest) {
+    return this.request<CharacterResponse>(`/player/campaigns/${campaignId}/characters`, {
+      method: "POST",
+      body: data,
+    });
+  }
+
+  async activateCharacter(characterId: number) {
+    return this.request<CharacterResponse>(`/player/characters/${characterId}/activate`, {
+      method: "POST",
+    });
+  }
+
+  async deleteCharacter(characterId: number) {
+    return this.request<{ message: string }>(`/player/characters/${characterId}`, {
+      method: "DELETE",
+    });
+  }
+
   // Backoffice endpoints
   async getCampaigns(params?: Record<string, string>) {
     const query = params ? `?${new URLSearchParams(params)}` : "";
@@ -232,6 +294,332 @@ class ApiClient {
   async getUsers(params?: Record<string, string>) {
     const query = params ? `?${new URLSearchParams(params)}` : "";
     return this.request<unknown[]>(`/backoffice/users${query}`);
+  }
+
+  // Character Classes (Backoffice)
+  async getClasses(params?: Record<string, string>) {
+    const query = params ? `?${new URLSearchParams(params)}` : "";
+    return this.request<ClassesResponse>(`/backoffice/classes${query}`);
+  }
+
+  async getClass(id: number) {
+    return this.request<ClassDetailResponse>(`/backoffice/classes/${id}`);
+  }
+
+  async createClass(data: CreateClassRequest) {
+    return this.request<ClassResponse>("/backoffice/classes", {
+      method: "POST",
+      body: data,
+    });
+  }
+
+  async updateClass(id: number, data: UpdateClassRequest) {
+    return this.request<ClassResponse>(`/backoffice/classes/${id}`, {
+      method: "PUT",
+      body: data,
+    });
+  }
+
+  async deleteClass(id: number) {
+    return this.request<{ message: string }>(`/backoffice/classes/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getClassSettings() {
+    return this.request<SettingsListResponse>("/backoffice/classes/settings");
+  }
+
+  // Races (Backoffice)
+  async getRaces(params?: Record<string, string>) {
+    const query = params ? `?${new URLSearchParams(params)}` : "";
+    return this.request<RacesResponse>(`/backoffice/races${query}`);
+  }
+
+  async getRace(id: number) {
+    return this.request<RaceDetailResponse>(`/backoffice/races/${id}`);
+  }
+
+  async createRace(data: CreateRaceRequest) {
+    return this.request<RaceResponse>("/backoffice/races", {
+      method: "POST",
+      body: data,
+    });
+  }
+
+  async updateRace(id: number, data: UpdateRaceRequest) {
+    return this.request<RaceResponse>(`/backoffice/races/${id}`, {
+      method: "PUT",
+      body: data,
+    });
+  }
+
+  async deleteRace(id: number) {
+    return this.request<{ message: string }>(`/backoffice/races/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getRaceSettings() {
+    return this.request<SettingsListResponse>("/backoffice/races/settings");
+  }
+
+  async getParentRaces() {
+    return this.request<ParentRacesResponse>("/backoffice/races/parents");
+  }
+
+  // Monsters (Backoffice)
+  async getMonsters(params?: Record<string, string>) {
+    const query = params ? `?${new URLSearchParams(params)}` : "";
+    return this.request<MonstersResponse>(`/backoffice/monsters${query}`);
+  }
+
+  async getMonster(id: number) {
+    return this.request<MonsterDetailResponse>(`/backoffice/monsters/${id}`);
+  }
+
+  async createMonster(data: CreateMonsterRequest) {
+    return this.request<MonsterResponse>("/backoffice/monsters", {
+      method: "POST",
+      body: data,
+    });
+  }
+
+  async updateMonster(id: number, data: UpdateMonsterRequest) {
+    return this.request<MonsterResponse>(`/backoffice/monsters/${id}`, {
+      method: "PUT",
+      body: data,
+    });
+  }
+
+  async deleteMonster(id: number) {
+    return this.request<{ message: string }>(`/backoffice/monsters/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getMonsterSettings() {
+    return this.request<SettingsListResponse>("/backoffice/monsters/settings");
+  }
+
+  async getMonsterTypes() {
+    return this.request<MonsterTypesResponse>("/backoffice/monsters/types");
+  }
+
+  // ===========================================================================
+  // Spells (Backoffice)
+  // ===========================================================================
+
+  async getSpells(params?: Record<string, string>) {
+    const query = params ? `?${new URLSearchParams(params)}` : "";
+    return this.request<SpellsResponse>(`/backoffice/spells${query}`);
+  }
+
+  async getSpell(id: number) {
+    return this.request<SpellDetailResponse>(`/backoffice/spells/${id}`);
+  }
+
+  async createSpell(data: CreateSpellRequest) {
+    return this.request<SpellResponse>("/backoffice/spells", {
+      method: "POST",
+      body: data,
+    });
+  }
+
+  async updateSpell(id: number, data: UpdateSpellRequest) {
+    return this.request<SpellResponse>(`/backoffice/spells/${id}`, {
+      method: "PUT",
+      body: data,
+    });
+  }
+
+  async deleteSpell(id: number) {
+    return this.request<{ message: string }>(`/backoffice/spells/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getSpellSettings() {
+    return this.request<SettingsListResponse>("/backoffice/spells/settings");
+  }
+
+  async getSpellSchools() {
+    return this.request<SpellSchoolsResponse>("/backoffice/spells/schools");
+  }
+
+  async getSpellClasses() {
+    return this.request<SpellClassesResponse>("/backoffice/spells/classes");
+  }
+
+  // ===========================================================================
+  // Campaign Control (DM character management)
+  // ===========================================================================
+
+  /**
+   * Get all characters in a campaign (for DM control panel)
+   */
+  async getCampaignCharacters(campaignId: number) {
+    return this.request<CampaignCharactersResponse>(
+      `/backoffice/campaigns/${campaignId}/characters`
+    );
+  }
+
+  /**
+   * Modify character HP (damage, healing, temp HP, or set directly)
+   */
+  async modifyCharacterHp(
+    characterId: number,
+    amount: number,
+    type: HpModificationType,
+    source?: string
+  ) {
+    return this.request<CharacterResponse>(
+      `/backoffice/characters/${characterId}/modify-hp`,
+      {
+        method: "POST",
+        body: { amount, type, source },
+      }
+    );
+  }
+
+  /**
+   * Add or remove a D&D condition from a character
+   */
+  async modifyCharacterConditions(
+    characterId: number,
+    action: "add" | "remove",
+    condition: Condition
+  ) {
+    return this.request<CharacterResponse>(
+      `/backoffice/characters/${characterId}/modify-conditions`,
+      {
+        method: "POST",
+        body: { action, condition },
+      }
+    );
+  }
+
+  /**
+   * Manage custom rules (add, update, remove perks/afflictions/curses)
+   */
+  async manageCustomRule(
+    characterId: number,
+    action: "add" | "update" | "remove",
+    rule: CustomRule
+  ) {
+    return this.request<CharacterResponse>(
+      `/backoffice/characters/${characterId}/custom-rules`,
+      {
+        method: "POST",
+        body: { action, rule },
+      }
+    );
+  }
+
+  /**
+   * Award XP to one or multiple characters
+   */
+  async awardXp(
+    campaignId: number,
+    characterIds: number[] | "all_active",
+    amount: number,
+    reason?: string
+  ) {
+    return this.request<{ result: XpAwardResult }>(
+      `/backoffice/campaigns/${campaignId}/characters/award-xp`,
+      {
+        method: "POST",
+        body: { character_ids: characterIds, amount, reason },
+      }
+    );
+  }
+
+  /**
+   * Give an item to a character
+   */
+  async giveItem(
+    characterId: number,
+    item: InventoryItem,
+    quantity?: number,
+    source?: string
+  ) {
+    return this.request<CharacterResponse>(
+      `/backoffice/characters/${characterId}/give-item`,
+      {
+        method: "POST",
+        body: { item, quantity: quantity ?? item.quantity, source },
+      }
+    );
+  }
+
+  /**
+   * Modify character currency (add or subtract gold, silver, etc.)
+   */
+  async modifyCurrency(
+    characterId: number,
+    currencyType: keyof Currency,
+    amount: number
+  ) {
+    return this.request<CharacterResponse>(
+      `/backoffice/characters/${characterId}/modify-currency`,
+      {
+        method: "POST",
+        body: { type: currencyType, amount },
+      }
+    );
+  }
+
+  /**
+   * Toggle character inspiration
+   */
+  async toggleInspiration(characterId: number) {
+    return this.request<CharacterResponse>(
+      `/backoffice/characters/${characterId}/toggle-inspiration`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  /**
+   * Activate a character (DM version)
+   */
+  async activateCharacterDM(campaignId: number, characterId: number) {
+    return this.request<CharacterResponse>(
+      `/backoffice/campaigns/${campaignId}/characters/${characterId}/activate`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  /**
+   * Deactivate a character
+   */
+  async deactivateCharacter(campaignId: number, characterId: number) {
+    return this.request<CharacterResponse>(
+      `/backoffice/campaigns/${campaignId}/characters/${characterId}/deactivate`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  /**
+   * Kill a character (move to graveyard with death info)
+   */
+  async killCharacter(
+    campaignId: number,
+    characterId: number,
+    deathInfo: KillCharacterRequest
+  ) {
+    return this.request<CharacterResponse>(
+      `/backoffice/campaigns/${campaignId}/characters/${characterId}/kill`,
+      {
+        method: "POST",
+        body: deathInfo,
+      }
+    );
   }
 }
 
