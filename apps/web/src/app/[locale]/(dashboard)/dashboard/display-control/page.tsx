@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { api } from "@/lib/api";
+import type { Display, Campaign } from "@/types/game";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,81 +33,124 @@ import {
   Trash2,
   MonitorPlay,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface ConnectedDisplay {
-  id: string;
-  name: string;
-  campaignId: string;
-  campaignName: string;
-  isAlive: boolean;
-  connectedAt: Date;
-}
+import { toast } from "sonner";
 
 export default function DisplayControlPage() {
   const t = useTranslations("dashboard.displayControl");
-  const tCommon = useTranslations("common");
 
   const [pairingCode, setPairingCode] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [selectedCampaign, setSelectedCampaign] = useState("");
   const [isPairing, setIsPairing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [displays, setDisplays] = useState<Display[]>([]);
 
-  // TODO: Replace with actual data from SWR
-  const campaigns = [
-    { id: "1", name: "Тайны Шарна" },
-    { id: "2", name: "Затерянные шахты" },
-  ];
+  // Load campaigns and displays
+  const loadData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const [campaignsRes, displaysRes] = await Promise.all([
+        api.getCampaigns(),
+        api.getDisplays(),
+      ]);
+      setCampaigns(campaignsRes.data as Campaign[]);
+      setDisplays(displaysRes.data);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+      toast.error("Не удалось загрузить данные");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const connectedDisplays: ConnectedDisplay[] = [
-    {
-      id: "1",
-      name: "Гостиная ТВ",
-      campaignId: "1",
-      campaignName: "Тайны Шарна",
-      isAlive: true,
-      connectedAt: new Date(),
-    },
-  ];
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const handlePair = async () => {
     if (!pairingCode || !selectedCampaign) return;
 
     setIsPairing(true);
     try {
-      // TODO: API call to pair display
-      console.log("Pairing:", pairingCode, selectedCampaign);
+      await api.pairDisplay({
+        code: pairingCode,
+        campaign_id: parseInt(selectedCampaign),
+        name: displayName || undefined,
+      });
+      toast.success("Дисплей подключён");
       setPairingCode("");
+      setDisplayName("");
+      setSelectedCampaign("");
+      void loadData();
+    } catch (error) {
+      console.error("Failed to pair display:", error);
+      toast.error("Неверный код или код истёк");
     } finally {
       setIsPairing(false);
     }
   };
 
-  const handleDisconnect = async (displayId: string) => {
-    // TODO: API call to disconnect display
-    console.log("Disconnecting:", displayId);
+  const handleDisconnect = async (displayId: number) => {
+    try {
+      await api.disconnectDisplay(displayId);
+      toast.success("Дисплей отключён");
+      setDisplays(displays.filter((d) => d.id !== displayId));
+    } catch (error) {
+      console.error("Failed to disconnect display:", error);
+      toast.error("Не удалось отключить дисплей");
+    }
   };
 
   const handleCommand = async (
+    displayId: number,
     command: "scene" | "music" | "text" | "blackout"
   ) => {
-    // TODO: API call to send command to display
-    console.log("Command:", command);
+    try {
+      await api.sendDisplayCommand(displayId, { command });
+      toast.success("Команда отправлена");
+    } catch (error) {
+      console.error("Failed to send command:", error);
+      toast.error("Дисплей не подключён или не отвечает");
+    }
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return "—";
+    const date = new Date(dateString);
     return date.toLocaleTimeString("ru-RU", {
       hour: "2-digit",
       minute: "2-digit",
     });
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-100">{t("title")}</h1>
-        <p className="text-zinc-400">{t("description")}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-100">{t("title")}</h1>
+          <p className="text-zinc-400">{t("description")}</p>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => void loadData()}
+          className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -136,7 +181,7 @@ export default function DisplayControlPage() {
                   {campaigns.map((campaign) => (
                     <SelectItem
                       key={campaign.id}
-                      value={campaign.id}
+                      value={campaign.id.toString()}
                       className="text-zinc-100 focus:bg-white/10 focus:text-zinc-100"
                     >
                       {campaign.name}
@@ -144,6 +189,20 @@ export default function DisplayControlPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="displayName" className="text-zinc-300">
+                Название дисплея (опционально)
+              </Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Например: Гостиная ТВ"
+                maxLength={100}
+                className="bg-zinc-800 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+              />
             </div>
 
             <div className="space-y-2">
@@ -167,7 +226,7 @@ export default function DisplayControlPage() {
                   )}
                 />
                 <Button
-                  onClick={handlePair}
+                  onClick={() => void handlePair()}
                   disabled={pairingCode.length !== 4 || !selectedCampaign || isPairing}
                   className="bg-primary hover:bg-primary/90 text-white min-w-[120px]"
                 >
@@ -182,7 +241,7 @@ export default function DisplayControlPage() {
           </CardContent>
         </Card>
 
-        {/* Quick controls */}
+        {/* Quick controls - show only if there are displays */}
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader>
             <CardTitle className="text-zinc-100">{t("controls.title")}</CardTitle>
@@ -191,56 +250,86 @@ export default function DisplayControlPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                className={cn(
-                  "h-24 flex-col gap-2",
-                  "bg-zinc-800 border-zinc-700 text-zinc-300",
-                  "hover:bg-zinc-700 hover:text-zinc-100 hover:border-zinc-600"
-                )}
-                onClick={() => handleCommand("scene")}
-              >
-                <Image className="h-7 w-7" />
-                <span className="text-sm">{t("controls.changeScene")}</span>
-              </Button>
-              <Button
-                variant="outline"
-                className={cn(
-                  "h-24 flex-col gap-2",
-                  "bg-zinc-800 border-zinc-700 text-zinc-300",
-                  "hover:bg-zinc-700 hover:text-zinc-100 hover:border-zinc-600"
-                )}
-                onClick={() => handleCommand("music")}
-              >
-                <Music className="h-7 w-7" />
-                <span className="text-sm">{t("controls.changeMusic")}</span>
-              </Button>
-              <Button
-                variant="outline"
-                className={cn(
-                  "h-24 flex-col gap-2",
-                  "bg-zinc-800 border-zinc-700 text-zinc-300",
-                  "hover:bg-zinc-700 hover:text-zinc-100 hover:border-zinc-600"
-                )}
-                onClick={() => handleCommand("text")}
-              >
-                <Type className="h-7 w-7" />
-                <span className="text-sm">{t("controls.showText")}</span>
-              </Button>
-              <Button
-                variant="outline"
-                className={cn(
-                  "h-24 flex-col gap-2",
-                  "bg-zinc-800 border-zinc-700 text-zinc-300",
-                  "hover:bg-zinc-700 hover:text-zinc-100 hover:border-zinc-600"
-                )}
-                onClick={() => handleCommand("blackout")}
-              >
-                <Moon className="h-7 w-7" />
-                <span className="text-sm">{t("controls.blackout")}</span>
-              </Button>
-            </div>
+            {displays.length === 0 ? (
+              <div className="py-8 text-center text-zinc-500">
+                Подключите дисплей для управления
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-24 flex-col gap-2",
+                    "bg-zinc-800 border-zinc-700 text-zinc-300",
+                    "hover:bg-zinc-700 hover:text-zinc-100 hover:border-zinc-600"
+                  )}
+                  onClick={() => {
+                    const aliveDisplay = displays.find((d) => d.is_alive);
+                    if (aliveDisplay) {
+                      void handleCommand(aliveDisplay.id, "scene");
+                    }
+                  }}
+                  disabled={!displays.some((d) => d.is_alive)}
+                >
+                  <Image className="h-7 w-7" />
+                  <span className="text-sm">{t("controls.changeScene")}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-24 flex-col gap-2",
+                    "bg-zinc-800 border-zinc-700 text-zinc-300",
+                    "hover:bg-zinc-700 hover:text-zinc-100 hover:border-zinc-600"
+                  )}
+                  onClick={() => {
+                    const aliveDisplay = displays.find((d) => d.is_alive);
+                    if (aliveDisplay) {
+                      void handleCommand(aliveDisplay.id, "music");
+                    }
+                  }}
+                  disabled={!displays.some((d) => d.is_alive)}
+                >
+                  <Music className="h-7 w-7" />
+                  <span className="text-sm">{t("controls.changeMusic")}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-24 flex-col gap-2",
+                    "bg-zinc-800 border-zinc-700 text-zinc-300",
+                    "hover:bg-zinc-700 hover:text-zinc-100 hover:border-zinc-600"
+                  )}
+                  onClick={() => {
+                    const aliveDisplay = displays.find((d) => d.is_alive);
+                    if (aliveDisplay) {
+                      void handleCommand(aliveDisplay.id, "text");
+                    }
+                  }}
+                  disabled={!displays.some((d) => d.is_alive)}
+                >
+                  <Type className="h-7 w-7" />
+                  <span className="text-sm">{t("controls.showText")}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-24 flex-col gap-2",
+                    "bg-zinc-800 border-zinc-700 text-zinc-300",
+                    "hover:bg-zinc-700 hover:text-zinc-100 hover:border-zinc-600"
+                  )}
+                  onClick={() => {
+                    const aliveDisplay = displays.find((d) => d.is_alive);
+                    if (aliveDisplay) {
+                      void handleCommand(aliveDisplay.id, "blackout");
+                    }
+                  }}
+                  disabled={!displays.some((d) => d.is_alive)}
+                >
+                  <Moon className="h-7 w-7" />
+                  <span className="text-sm">{t("controls.blackout")}</span>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -254,7 +343,7 @@ export default function DisplayControlPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {connectedDisplays.length === 0 ? (
+          {displays.length === 0 ? (
             <div className="py-12 text-center">
               <MonitorPlay className="mx-auto mb-4 h-16 w-16 text-zinc-700" />
               <h3 className="text-lg font-medium text-zinc-300 mb-2">
@@ -266,7 +355,7 @@ export default function DisplayControlPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {connectedDisplays.map((display) => (
+              {displays.map((display) => (
                 <div
                   key={display.id}
                   className={cn(
@@ -278,12 +367,12 @@ export default function DisplayControlPage() {
                     <div
                       className={cn(
                         "flex h-10 w-10 items-center justify-center rounded-lg",
-                        display.isAlive
+                        display.is_alive
                           ? "bg-emerald-500/20"
                           : "bg-red-500/20"
                       )}
                     >
-                      {display.isAlive ? (
+                      {display.is_alive ? (
                         <Wifi className="h-5 w-5 text-emerald-400" />
                       ) : (
                         <WifiOff className="h-5 w-5 text-red-400" />
@@ -292,30 +381,30 @@ export default function DisplayControlPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-zinc-100">
-                          {display.name}
+                          {display.name || `Дисплей #${display.id}`}
                         </p>
                         <Badge
                           variant="outline"
                           className={cn(
                             "text-xs",
-                            display.isAlive
+                            display.is_alive
                               ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                               : "bg-red-500/20 text-red-400 border-red-500/30"
                           )}
                         >
-                          {display.isAlive ? "Онлайн" : "Офлайн"}
+                          {display.is_alive ? "Онлайн" : "Офлайн"}
                         </Badge>
                       </div>
                       <p className="text-sm text-zinc-500">
-                        {display.campaignName} · Подключён в{" "}
-                        {formatTime(display.connectedAt)}
+                        {display.campaign?.name || "Без кампании"} · Подключён в{" "}
+                        {formatTime(display.paired_at)}
                       </p>
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDisconnect(display.id)}
+                    onClick={() => void handleDisconnect(display.id)}
                     className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
                   >
                     <Trash2 className="h-4 w-4" />

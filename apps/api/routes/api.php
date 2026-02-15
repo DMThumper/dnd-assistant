@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\V1\Backoffice\GameSessionController;
 use App\Http\Controllers\Api\V1\Backoffice\MonsterController as BackofficeMonsterController;
 use App\Http\Controllers\Api\V1\Backoffice\RaceController as BackofficeRaceController;
 use App\Http\Controllers\Api\V1\Backoffice\SpellController as BackofficeSpellController;
+use App\Http\Controllers\Api\V1\Backoffice\DisplayController as BackofficeDisplayController;
+use App\Http\Controllers\Api\V1\Display\DisplayController;
 use App\Http\Controllers\Api\V1\Player\CampaignController as PlayerCampaignController;
 use App\Http\Controllers\Api\V1\Player\CharacterController as PlayerCharacterController;
 use Illuminate\Support\Facades\Route;
@@ -210,6 +212,15 @@ Route::prefix('v1')->group(function () {
             // Route::apiResource('items', ItemController::class);
 
             // -----------------------------------------------------------------
+            // Display Management (DM controls TV/monitor displays)
+            // -----------------------------------------------------------------
+            Route::get('displays', [BackofficeDisplayController::class, 'index']);
+            Route::post('displays/pair', [BackofficeDisplayController::class, 'pair']);
+            Route::delete('displays/{display}', [BackofficeDisplayController::class, 'disconnect']);
+            Route::post('displays/{display}/command', [BackofficeDisplayController::class, 'sendCommand']);
+            Route::get('campaigns/{campaign}/displays', [BackofficeDisplayController::class, 'forCampaign']);
+
+            // -----------------------------------------------------------------
             // Battle Tracker
             // -----------------------------------------------------------------
             // Route::prefix('battles')->group(function () {
@@ -237,11 +248,14 @@ Route::prefix('v1')->group(function () {
         });
 
         // =====================================================================
-        // Display routes (for TV/monitor client)
+        // Display routes (for TV/monitor client - no auth required)
         // =====================================================================
         Route::prefix('display')->group(function () {
-            // Route::get('current-scene/{campaign}', [DisplayController::class, 'currentScene']);
-            // Route::post('join/{campaign}', [DisplayController::class, 'join']);
+            Route::post('register', [DisplayController::class, 'register']);
+            Route::get('status', [DisplayController::class, 'status']);
+            Route::post('refresh-code', [DisplayController::class, 'refreshCode']);
+            Route::post('heartbeat', [DisplayController::class, 'heartbeat']);
+            Route::post('disconnect', [DisplayController::class, 'disconnect']);
         });
     });
 });

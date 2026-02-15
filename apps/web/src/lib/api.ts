@@ -26,6 +26,11 @@ import type {
   GameSessionRequest,
   ActStatus,
   GameSessionStatus,
+  Display,
+  DisplayRegistration,
+  DisplayStatusResponse,
+  DisplayPairRequest,
+  DisplayCommandRequest,
 } from "@/types/game";
 import type {
   CharacterCreationData,
@@ -821,6 +826,120 @@ class ApiClient {
         body: { target_act_id: targetActId },
       }
     );
+  }
+
+  // ===========================================================================
+  // Display Management (DM controls TV/monitor displays)
+  // ===========================================================================
+
+  /**
+   * Get all displays for the current DM
+   */
+  async getDisplays() {
+    return this.request<Display[]>("/backoffice/displays");
+  }
+
+  /**
+   * Pair a display by code
+   */
+  async pairDisplay(data: DisplayPairRequest) {
+    return this.request<Display>("/backoffice/displays/pair", {
+      method: "POST",
+      body: data,
+    });
+  }
+
+  /**
+   * Disconnect a display
+   */
+  async disconnectDisplay(displayId: number) {
+    return this.request<{ message: string }>(`/backoffice/displays/${displayId}`, {
+      method: "DELETE",
+    });
+  }
+
+  /**
+   * Send command to a display
+   */
+  async sendDisplayCommand(displayId: number, command: DisplayCommandRequest) {
+    return this.request<{ message: string }>(
+      `/backoffice/displays/${displayId}/command`,
+      {
+        method: "POST",
+        body: command,
+      }
+    );
+  }
+
+  /**
+   * Get displays for a specific campaign
+   */
+  async getCampaignDisplays(campaignId: number) {
+    return this.request<Display[]>(`/backoffice/campaigns/${campaignId}/displays`);
+  }
+
+  // ===========================================================================
+  // Display Client endpoints (for TV/monitor device itself)
+  // ===========================================================================
+
+  /**
+   * Register a new display (gets pairing code)
+   */
+  async registerDisplay() {
+    return this.request<DisplayRegistration>("/display/register", {
+      method: "POST",
+    });
+  }
+
+  /**
+   * Get display status (for polling or after reconnect)
+   * @param token Display token from registration
+   */
+  async getDisplayStatus(token: string) {
+    return this.request<DisplayStatusResponse>("/display/status", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
+
+  /**
+   * Refresh display pairing code
+   * @param token Display token from registration
+   */
+  async refreshDisplayCode(token: string) {
+    return this.request<{ code: string; code_ttl: number }>("/display/refresh-code", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
+
+  /**
+   * Send heartbeat from display
+   * @param token Display token from registration
+   */
+  async displayHeartbeat(token: string) {
+    return this.request<{ status: string }>("/display/heartbeat", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
+
+  /**
+   * Disconnect display (when display closes)
+   * @param token Display token from registration
+   */
+  async disconnectDisplayClient(token: string) {
+    return this.request<{ message: string }>("/display/disconnect", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
   }
 }
 

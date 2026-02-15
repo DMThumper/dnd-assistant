@@ -432,3 +432,72 @@ export interface ReorderRequest {
 export interface MoveSessionRequest {
   target_act_id: number;
 }
+
+// ===========================================================================
+// Display (TV/Monitor Control)
+// ===========================================================================
+
+// Display status
+export type DisplayStatus = "waiting" | "paired" | "disconnected";
+
+// Display (for DM to manage)
+export interface Display {
+  id: number;
+  name: string | null;
+  status: DisplayStatus;
+  is_alive: boolean;
+  campaign: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
+  paired_at: string | null;
+  last_heartbeat_at: string | null;
+}
+
+// Display registration response (for display client)
+export interface DisplayRegistration {
+  token: string;
+  code: string;
+  code_ttl: number;
+  status: DisplayStatus;
+}
+
+// Display status response (for display client polling)
+export interface DisplayStatusResponse {
+  status: DisplayStatus;
+  code: string | null;
+  code_ttl: number | null;
+  campaign: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
+}
+
+// Display pair request
+export interface DisplayPairRequest {
+  code: string;
+  campaign_id: number;
+  name?: string;
+}
+
+// Display command types
+export type DisplayCommandType = "scene" | "music" | "text" | "blackout" | "choice";
+
+// Display command payload
+export interface DisplayCommandPayload {
+  scene_id?: number;
+  soundtrack_id?: number;
+  text?: string;
+  choices?: Array<{
+    label: string;
+    target_scene_id?: number;
+  }>;
+}
+
+// Display command request
+export interface DisplayCommandRequest {
+  command: DisplayCommandType;
+  payload?: DisplayCommandPayload;
+}
