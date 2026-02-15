@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { api } from "@/lib/api";
+import type { Campaign } from "@/types/game";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +27,7 @@ import {
   Pencil,
   Trash2,
   Eye,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,18 +36,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-interface Campaign {
-  id: string;
-  name: string;
-  description: string;
-  settingName: string;
-  status: "active" | "paused" | "completed";
-  playerCount: number;
-  actCount: number;
-  sessionCount: number;
-  lastPlayedAt: Date | null;
-}
 
 const statusConfig = {
   active: {
@@ -68,51 +59,53 @@ export default function CampaignsPage() {
   const t = useTranslations("dashboard.campaigns");
   const tCommon = useTranslations("common");
 
-  // TODO: Replace with SWR data fetching
-  const campaigns: Campaign[] = [
-    {
-      id: "1",
-      name: "Тайны Шарна",
-      description:
-        "Приключение в величайшем городе Кхорвера. Интриги Домов и древние секреты.",
-      settingName: "Эберрон",
-      status: "active",
-      playerCount: 4,
-      actCount: 3,
-      sessionCount: 5,
-      lastPlayedAt: new Date(Date.now() - 86400000),
-    },
-    {
-      id: "2",
-      name: "Затерянные шахты Фанделвера",
-      description: "Классическое приключение для начинающих.",
-      settingName: "Забытые Королевства",
-      status: "paused",
-      playerCount: 3,
-      actCount: 2,
-      sessionCount: 8,
-      lastPlayedAt: new Date(Date.now() - 604800000),
-    },
-    {
-      id: "3",
-      name: "Проклятие Страда",
-      description: "Готический хоррор в мрачных землях Баровии.",
-      settingName: "Равенлофт",
-      status: "completed",
-      playerCount: 5,
-      actCount: 4,
-      sessionCount: 24,
-      lastPlayedAt: new Date(Date.now() - 2592000000),
-    },
-  ];
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return "—";
+  const loadCampaigns = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await api.getCampaigns();
+      setCampaigns(response.data as Campaign[]);
+    } catch {
+      setError("Не удалось загрузить кампании");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCampaigns();
+  }, [loadCampaigns]);
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "—";
+    const date = new Date(dateString);
     return date.toLocaleDateString("ru-RU", {
       day: "numeric",
       month: "short",
     });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="text-destructive">{error}</div>
+        <Button onClick={() => void loadCampaigns()} className="mt-4">
+          Повторить
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -169,7 +162,7 @@ export default function CampaignsPage() {
                         {campaign.name}
                       </CardTitle>
                       <CardDescription className="text-zinc-500 line-clamp-1">
-                        {campaign.settingName}
+                        {campaign.setting?.name || "Без сеттинга"}
                       </CardDescription>
                     </div>
                     <DropdownMenu>
@@ -186,10 +179,12 @@ export default function CampaignsPage() {
                         align="end"
                         className="bg-zinc-800 border-zinc-700 text-zinc-100"
                       >
-                        <DropdownMenuItem className="hover:bg-white/10 cursor-pointer">
-                          <Eye className="mr-2 h-4 w-4" />
-                          Открыть
-                        </DropdownMenuItem>
+                        <Link href={`/dashboard/campaign/${campaign.slug}`}>
+                          <DropdownMenuItem className="hover:bg-white/10 cursor-pointer">
+                            <Eye className="mr-2 h-4 w-4" />
+                            Открыть
+                          </DropdownMenuItem>
+                        </Link>
                         <DropdownMenuItem className="hover:bg-white/10 cursor-pointer">
                           <Pencil className="mr-2 h-4 w-4" />
                           {tCommon("edit")}
@@ -204,22 +199,21 @@ export default function CampaignsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="line-clamp-2 text-sm text-zinc-400">
-                    {campaign.description}
-                  </p>
+                  {campaign.description && (
+                    <p className="line-clamp-2 text-sm text-zinc-400">
+                      {campaign.description}
+                    </p>
+                  )}
 
                   {/* Stats row */}
                   <div className="flex items-center gap-4 text-sm text-zinc-500">
                     <div className="flex items-center gap-1.5">
                       <Users className="h-4 w-4" />
-                      <span>{campaign.playerCount}</span>
+                      <span>{campaign.players_count}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <BookOpen className="h-4 w-4" />
-                      <span>
-                        {campaign.actCount} {t("acts")} / {campaign.sessionCount}{" "}
-                        {t("sessions")}
-                      </span>
+                      <span>{campaign.characters_count} персонажей</span>
                     </div>
                   </div>
 
@@ -234,12 +228,12 @@ export default function CampaignsPage() {
                     </Badge>
                     <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                       <Calendar className="h-3 w-3" />
-                      <span>{formatDate(campaign.lastPlayedAt)}</span>
+                      <span>{formatDate(campaign.updated_at)}</span>
                     </div>
                   </div>
 
                   {/* Action button */}
-                  <Link href={`/dashboard/campaign/${campaign.id}`}>
+                  <Link href={`/dashboard/campaign/${campaign.slug}`}>
                     <Button
                       variant="secondary"
                       className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-0"

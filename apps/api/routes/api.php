@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Backoffice\ActController;
+use App\Http\Controllers\Api\V1\Backoffice\CampaignController as BackofficeCampaignController;
 use App\Http\Controllers\Api\V1\Backoffice\CampaignPlayerController;
 use App\Http\Controllers\Api\V1\Backoffice\CharacterController as BackofficeCharacterController;
 use App\Http\Controllers\Api\V1\Backoffice\ClassController as BackofficeClassController;
@@ -117,7 +118,12 @@ Route::prefix('v1')->group(function () {
             // -----------------------------------------------------------------
             // Campaigns
             // -----------------------------------------------------------------
-            // Route::apiResource('campaigns', CampaignController::class);
+            Route::get('campaigns', [BackofficeCampaignController::class, 'index']);
+            Route::post('campaigns', [BackofficeCampaignController::class, 'store']);
+            Route::get('campaigns/{campaign}', [BackofficeCampaignController::class, 'show']);
+            Route::patch('campaigns/{campaign}', [BackofficeCampaignController::class, 'update']);
+            Route::delete('campaigns/{campaign}', [BackofficeCampaignController::class, 'destroy']);
+
             Route::prefix('campaigns/{campaign}')->group(function () {
                 // Players management
                 Route::get('players', [CampaignPlayerController::class, 'index']);
