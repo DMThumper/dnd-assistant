@@ -355,3 +355,80 @@ export interface CampaignCharactersResponse {
     slug: string;
   };
 }
+
+// ===========================================================================
+// Acts and Sessions (Campaign Structure)
+// ===========================================================================
+
+// Act status
+export type ActStatus = "planned" | "active" | "completed";
+
+// Act (story arc within a campaign)
+export interface Act {
+  id: number;
+  campaign_id: number;
+  number: number;
+  name: string;
+  description: string | null;
+  intro: string | null;
+  epilogue: string | null;
+  status: ActStatus;
+  sort_order: number;
+  formatted_title: string;
+  sessions_count: number;
+  completed_sessions_count: number;
+  is_active: boolean;
+  is_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Game Session status
+export type GameSessionStatus = "planned" | "active" | "completed";
+
+// Game Session (a single play session within an act)
+export interface GameSession {
+  id: number;
+  act_id: number;
+  number: number;
+  global_number: number;
+  name: string;
+  summary: string | null;
+  status: GameSessionStatus;
+  played_at: string | null;
+  sort_order: number;
+  formatted_title: string;
+  is_planned: boolean;
+  is_active: boolean;
+  is_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Create/Update Act request
+export interface ActRequest {
+  name: string;
+  description?: string | null;
+  intro?: string | null;
+  epilogue?: string | null;
+  status?: ActStatus;
+}
+
+// Create/Update Session request
+export interface GameSessionRequest {
+  name: string;
+  summary?: string | null;
+  status?: GameSessionStatus;
+  played_at?: string | null;
+}
+
+// Reorder request
+export interface ReorderRequest {
+  act_ids?: number[];
+  session_ids?: number[];
+}
+
+// Move session request
+export interface MoveSessionRequest {
+  target_act_id: number;
+}

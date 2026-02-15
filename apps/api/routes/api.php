@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Backoffice\ActController;
 use App\Http\Controllers\Api\V1\Backoffice\CampaignPlayerController;
 use App\Http\Controllers\Api\V1\Backoffice\CharacterController as BackofficeCharacterController;
 use App\Http\Controllers\Api\V1\Backoffice\ClassController as BackofficeClassController;
-use App\Http\Controllers\Api\V1\Backoffice\RaceController as BackofficeRaceController;
+use App\Http\Controllers\Api\V1\Backoffice\GameSessionController;
 use App\Http\Controllers\Api\V1\Backoffice\MonsterController as BackofficeMonsterController;
+use App\Http\Controllers\Api\V1\Backoffice\RaceController as BackofficeRaceController;
 use App\Http\Controllers\Api\V1\Backoffice\SpellController as BackofficeSpellController;
 use App\Http\Controllers\Api\V1\Player\CampaignController as PlayerCampaignController;
 use App\Http\Controllers\Api\V1\Player\CharacterController as PlayerCharacterController;
@@ -132,9 +134,32 @@ Route::prefix('v1')->group(function () {
                 // XP management (award to multiple characters)
                 Route::post('characters/award-xp', [BackofficeCharacterController::class, 'awardXp']);
 
-                // TODO: Sessions, encounters, npcs, notes, random-tables
-                // Route::apiResource('sessions', SessionController::class);
-                // Route::apiResource('sessions/{session}/scenes', SceneController::class);
+                // -----------------------------------------------------------------
+                // Acts (сюжетные арки)
+                // -----------------------------------------------------------------
+                Route::get('acts', [ActController::class, 'index']);
+                Route::post('acts', [ActController::class, 'store']);
+                Route::post('acts/reorder', [ActController::class, 'reorder']);
+                Route::get('acts/{act}', [ActController::class, 'show']);
+                Route::patch('acts/{act}', [ActController::class, 'update']);
+                Route::delete('acts/{act}', [ActController::class, 'destroy']);
+                Route::post('acts/{act}/status', [ActController::class, 'updateStatus']);
+
+                // -----------------------------------------------------------------
+                // Game Sessions (сессии внутри актов)
+                // -----------------------------------------------------------------
+                Route::prefix('acts/{act}')->group(function () {
+                    Route::get('sessions', [GameSessionController::class, 'index']);
+                    Route::post('sessions', [GameSessionController::class, 'store']);
+                    Route::post('sessions/reorder', [GameSessionController::class, 'reorder']);
+                    Route::get('sessions/{session}', [GameSessionController::class, 'show']);
+                    Route::patch('sessions/{session}', [GameSessionController::class, 'update']);
+                    Route::delete('sessions/{session}', [GameSessionController::class, 'destroy']);
+                    Route::post('sessions/{session}/status', [GameSessionController::class, 'updateStatus']);
+                    Route::post('sessions/{session}/move', [GameSessionController::class, 'move']);
+                });
+
+                // TODO: encounters, npcs, notes, random-tables
                 // Route::apiResource('encounters', EncounterController::class);
                 // Route::apiResource('npcs', NpcController::class);
                 // Route::apiResource('notes', NoteController::class);

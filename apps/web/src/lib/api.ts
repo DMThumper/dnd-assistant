@@ -20,6 +20,12 @@ import type {
   InventoryItem,
   Currency,
   KillCharacterRequest,
+  Act,
+  GameSession,
+  ActRequest,
+  GameSessionRequest,
+  ActStatus,
+  GameSessionStatus,
 } from "@/types/game";
 import type {
   CharacterCreationData,
@@ -618,6 +624,201 @@ class ApiClient {
       {
         method: "POST",
         body: deathInfo,
+      }
+    );
+  }
+
+  // ===========================================================================
+  // Acts (Campaign Story Structure)
+  // ===========================================================================
+
+  /**
+   * Get all acts for a campaign
+   */
+  async getActs(campaignId: number) {
+    return this.request<Act[]>(`/backoffice/campaigns/${campaignId}/acts`);
+  }
+
+  /**
+   * Get a specific act
+   */
+  async getAct(campaignId: number, actId: number) {
+    return this.request<Act>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}`
+    );
+  }
+
+  /**
+   * Create a new act
+   */
+  async createAct(campaignId: number, data: ActRequest) {
+    return this.request<Act>(`/backoffice/campaigns/${campaignId}/acts`, {
+      method: "POST",
+      body: data,
+    });
+  }
+
+  /**
+   * Update an act
+   */
+  async updateAct(campaignId: number, actId: number, data: Partial<ActRequest>) {
+    return this.request<Act>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}`,
+      {
+        method: "PATCH",
+        body: data,
+      }
+    );
+  }
+
+  /**
+   * Delete an act
+   */
+  async deleteAct(campaignId: number, actId: number) {
+    return this.request<{ message: string }>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+
+  /**
+   * Reorder acts
+   */
+  async reorderActs(campaignId: number, actIds: number[]) {
+    return this.request<{ message: string }>(
+      `/backoffice/campaigns/${campaignId}/acts/reorder`,
+      {
+        method: "POST",
+        body: { act_ids: actIds },
+      }
+    );
+  }
+
+  /**
+   * Update act status
+   */
+  async updateActStatus(campaignId: number, actId: number, status: ActStatus) {
+    return this.request<Act>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}/status`,
+      {
+        method: "POST",
+        body: { status },
+      }
+    );
+  }
+
+  // ===========================================================================
+  // Game Sessions (within Acts)
+  // ===========================================================================
+
+  /**
+   * Get all sessions for an act
+   */
+  async getSessions(campaignId: number, actId: number) {
+    return this.request<GameSession[]>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}/sessions`
+    );
+  }
+
+  /**
+   * Get a specific session
+   */
+  async getSession(campaignId: number, actId: number, sessionId: number) {
+    return this.request<GameSession>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}/sessions/${sessionId}`
+    );
+  }
+
+  /**
+   * Create a new session
+   */
+  async createSession(campaignId: number, actId: number, data: GameSessionRequest) {
+    return this.request<GameSession>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}/sessions`,
+      {
+        method: "POST",
+        body: data,
+      }
+    );
+  }
+
+  /**
+   * Update a session
+   */
+  async updateSession(
+    campaignId: number,
+    actId: number,
+    sessionId: number,
+    data: Partial<GameSessionRequest>
+  ) {
+    return this.request<GameSession>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}/sessions/${sessionId}`,
+      {
+        method: "PATCH",
+        body: data,
+      }
+    );
+  }
+
+  /**
+   * Delete a session
+   */
+  async deleteSession(campaignId: number, actId: number, sessionId: number) {
+    return this.request<{ message: string }>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}/sessions/${sessionId}`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+
+  /**
+   * Reorder sessions within an act
+   */
+  async reorderSessions(campaignId: number, actId: number, sessionIds: number[]) {
+    return this.request<{ message: string }>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}/sessions/reorder`,
+      {
+        method: "POST",
+        body: { session_ids: sessionIds },
+      }
+    );
+  }
+
+  /**
+   * Update session status
+   */
+  async updateSessionStatus(
+    campaignId: number,
+    actId: number,
+    sessionId: number,
+    status: GameSessionStatus
+  ) {
+    return this.request<GameSession>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}/sessions/${sessionId}/status`,
+      {
+        method: "POST",
+        body: { status },
+      }
+    );
+  }
+
+  /**
+   * Move session to another act
+   */
+  async moveSession(
+    campaignId: number,
+    actId: number,
+    sessionId: number,
+    targetActId: number
+  ) {
+    return this.request<GameSession>(
+      `/backoffice/campaigns/${campaignId}/acts/${actId}/sessions/${sessionId}/move`,
+      {
+        method: "POST",
+        body: { target_act_id: targetActId },
       }
     );
   }
