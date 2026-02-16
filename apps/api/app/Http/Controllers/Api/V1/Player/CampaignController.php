@@ -54,4 +54,30 @@ class CampaignController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Get live session status for a campaign
+     */
+    public function liveSession(Request $request, Campaign $campaign): JsonResponse
+    {
+        $user = $request->user();
+
+        // Check if user is a player in this campaign
+        if (!$campaign->hasPlayer($user) && $campaign->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Вы не являетесь участником этой кампании',
+            ], 403);
+        }
+
+        $liveSession = $campaign->getActiveLiveSession();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'has_active_session' => $liveSession !== null,
+                'live_session' => $liveSession?->formatForApi(),
+            ],
+        ]);
+    }
 }

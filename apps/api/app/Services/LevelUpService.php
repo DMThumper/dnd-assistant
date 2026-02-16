@@ -155,7 +155,7 @@ class LevelUpService
         $character->level = $newLevel;
         $character->max_hp += $hpIncrease;
         $character->current_hp += $hpIncrease; // Heal by HP increase amount
-        $character->proficiency_bonus = $proficiencyBonus;
+        // proficiency_bonus is calculated, not stored
         $character->class_levels = $classLevels;
         $character->asi_choices = $asiChoices;
         $character->hit_dice_remaining = $hitDiceRemaining;
@@ -179,11 +179,13 @@ class LevelUpService
         $character->save();
 
         // Broadcast level up event
-        broadcast(new LevelUp($character, $previousLevel, $newLevel, [
-            'hp_increase' => $hpIncrease,
-            'class' => $levelingClass,
-            'asi' => $choices['asi'] ?? null,
-        ]));
+        broadcast(new LevelUp(
+            $character,
+            $previousLevel,
+            $newLevel,
+            $levelingClass,
+            $choices['features'] ?? []
+        ));
 
         return $character;
     }
@@ -231,19 +233,22 @@ class LevelUpService
         $currentClasses = array_keys($character->class_levels ?? [$character->class_slug => $character->level]);
         $availableClasses = [];
 
+        // Get all classes for this setting
+        $allClasses = CharacterClass::whereHas('settings', function ($q) use ($campaign) {
+            $q->where('settings.id', $campaign->setting_id);
+        })->get()->keyBy('slug');
+
         // Current classes are always available
         foreach ($currentClasses as $classSlug) {
+            $class = $allClasses->get($classSlug);
             $availableClasses[$classSlug] = [
                 'current' => true,
                 'meets_prerequisites' => true,
+                'name' => $class?->getTranslation('name', 'ru') ?? $classSlug,
             ];
         }
 
         // Check multiclass prerequisites for new classes
-        $allClasses = CharacterClass::whereHas('settings', function ($q) use ($campaign) {
-            $q->where('settings.id', $campaign->setting_id);
-        })->get();
-
         foreach ($allClasses as $class) {
             if (isset($availableClasses[$class->slug])) {
                 continue;
@@ -256,6 +261,7 @@ class LevelUpService
                 'current' => false,
                 'meets_prerequisites' => $meetsPrereqs,
                 'prerequisites' => $prereqs,
+                'name' => $class->getTranslation('name', 'ru'),
             ];
         }
 

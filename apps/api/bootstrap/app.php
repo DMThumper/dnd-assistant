@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\BackofficeAccess;
+use App\Http\Middleware\BroadcastCors;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,8 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust all proxies (running behind Nginx/Coolify)
         $middleware->trustProxies(at: '*');
 
-        // CORS handled entirely by Caddy/Coolify proxy
-        // Laravel CORS disabled in config/cors.php (paths = [])
+        // Add custom CORS for broadcasting (handles OPTIONS + adds headers)
+        // This must run FIRST to catch preflight requests
+        $middleware->prepend(BroadcastCors::class);
 
         // Register middleware aliases
         $middleware->alias([

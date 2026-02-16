@@ -136,6 +136,30 @@ class Campaign extends Model
     }
 
     /**
+     * Live sessions for this campaign
+     */
+    public function liveSessions(): HasMany
+    {
+        return $this->hasMany(LiveSession::class);
+    }
+
+    /**
+     * Get currently active live session
+     */
+    public function getActiveLiveSession(): ?LiveSession
+    {
+        return $this->liveSessions()->active()->first();
+    }
+
+    /**
+     * Check if campaign has an active live session
+     */
+    public function hasActiveLiveSession(): bool
+    {
+        return $this->liveSessions()->active()->exists();
+    }
+
+    /**
      * Check if a user is a player in this campaign
      */
     public function hasPlayer(User $user): bool
@@ -156,6 +180,8 @@ class Campaign extends Model
      */
     public function formatForApi(): array
     {
+        $liveSession = $this->getActiveLiveSession();
+
         return [
             'id' => $this->id,
             'name' => $this->getTranslation('name', 'ru'),
@@ -174,6 +200,8 @@ class Campaign extends Model
             ],
             'players_count' => $this->players()->count(),
             'characters_count' => $this->characters()->where('is_alive', true)->count(),
+            'has_active_live_session' => $liveSession !== null,
+            'live_session' => $liveSession?->formatForApi(),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Backoffice;
 
+use App\Events\CharacterUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\Character;
@@ -191,6 +192,9 @@ class CharacterController extends Controller
             'death_info' => $deathInfo,
             'current_hp' => 0,
         ]);
+
+        // Broadcast death event
+        broadcast(new CharacterUpdated($character->fresh(), 'death', $deathInfo));
 
         return response()->json([
             'success' => true,

@@ -49,7 +49,10 @@ export default function LandingPage() {
           </div>
           <nav className="flex items-center gap-4">
             <Link href="/login">
-              <Button variant="ghost">{t("hero.cta")}</Button>
+              <Button variant="ghost">{t("nav.login")}</Button>
+            </Link>
+            <Link href="/register">
+              <Button variant="outline">{t("nav.register")}</Button>
             </Link>
           </nav>
         </div>
@@ -66,11 +69,17 @@ export default function LandingPage() {
         <p className="mb-8 text-lg text-muted-foreground">
           {t("hero.description")}
         </p>
-        <Link href="/register">
+        <Link href="/login">
           <Button size="lg" className="bg-primary hover:bg-primary/90">
             {t("hero.cta")}
           </Button>
         </Link>
+        <p className="mt-4 text-sm text-muted-foreground">
+          {t("hero.noAccount")}{" "}
+          <Link href="/register" className="text-primary hover:underline">
+            {t("hero.registerLink")}
+          </Link>
+        </p>
       </section>
 
       {/* Features Section */}

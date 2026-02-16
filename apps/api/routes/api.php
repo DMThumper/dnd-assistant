@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Backoffice\MonsterController as BackofficeMonste
 use App\Http\Controllers\Api\V1\Backoffice\RaceController as BackofficeRaceController;
 use App\Http\Controllers\Api\V1\Backoffice\SpellController as BackofficeSpellController;
 use App\Http\Controllers\Api\V1\Backoffice\DisplayController as BackofficeDisplayController;
+use App\Http\Controllers\Api\V1\Backoffice\LiveSessionController;
 use App\Http\Controllers\Api\V1\Display\DisplayController;
 use App\Http\Controllers\Api\V1\Player\CampaignController as PlayerCampaignController;
 use App\Http\Controllers\Api\V1\Player\CharacterController as PlayerCharacterController;
@@ -72,6 +73,7 @@ Route::prefix('v1')->group(function () {
             // Campaigns
             Route::get('campaigns', [PlayerCampaignController::class, 'index']);
             Route::get('campaigns/{campaign}', [PlayerCampaignController::class, 'show']);
+            Route::get('campaigns/{campaign}/live-session', [PlayerCampaignController::class, 'liveSession']);
 
             // Characters
             Route::get('campaigns/{campaign}/characters', [PlayerCharacterController::class, 'index']);
@@ -127,6 +129,12 @@ Route::prefix('v1')->group(function () {
             Route::delete('campaigns/{campaign}', [BackofficeCampaignController::class, 'destroy']);
 
             Route::prefix('campaigns/{campaign}')->group(function () {
+                // Live session management (DM starts/stops live games)
+                Route::get('live-session', [LiveSessionController::class, 'status']);
+                Route::post('live-session/start', [LiveSessionController::class, 'start']);
+                Route::post('live-session/stop', [LiveSessionController::class, 'stop']);
+                Route::get('live-session/history', [LiveSessionController::class, 'history']);
+
                 // Players management
                 Route::get('players', [CampaignPlayerController::class, 'index']);
                 Route::get('players/available', [CampaignPlayerController::class, 'available']);

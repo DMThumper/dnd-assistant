@@ -29,6 +29,13 @@ services:
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
       QUEUE_CONNECTION: redis
+      BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: ${REVERB_APP_ID:-dnd-app}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-dnd-reverb-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-dnd-reverb-secret}
+      REVERB_HOST: reverb
+      REVERB_PORT: 8080
+      REVERB_SCHEME: http
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,6 +65,13 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       QUEUE_CONNECTION: redis
+      BROADCAST_CONNECTION: reverb
+      REVERB_APP_ID: ${REVERB_APP_ID:-dnd-app}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-dnd-reverb-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-dnd-reverb-secret}
+      REVERB_HOST: reverb
+      REVERB_PORT: 8080
+      REVERB_SCHEME: http
     command: php artisan queue:work --queue=default,media --sleep=3 --tries=3
     depends_on:
       - api
@@ -86,9 +100,9 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-secret}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REVERB_HOST: "0.0.0.0"
-      REVERB_PORT: 8080
-      REVERB_APP_ID: dnd-assistant
+      REVERB_SERVER_HOST: "0.0.0.0"
+      REVERB_SERVER_PORT: 8080
+      REVERB_APP_ID: ${REVERB_APP_ID:-dnd-app}
       REVERB_APP_KEY: ${REVERB_APP_KEY:-dnd-reverb-key}
       REVERB_APP_SECRET: ${REVERB_APP_SECRET:-dnd-reverb-secret}
     command: php artisan reverb:start --host=0.0.0.0 --port=8080

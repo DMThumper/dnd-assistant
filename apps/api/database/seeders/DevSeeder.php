@@ -5,11 +5,13 @@ namespace Database\Seeders;
 use App\Models\Act;
 use App\Models\Campaign;
 use App\Models\Character;
+use App\Models\DisplayToken;
 use App\Models\GameSession;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Development seeder - only runs in local environment
@@ -29,6 +31,7 @@ class DevSeeder extends Seeder
         $campaign = $this->seedSampleCampaign();
         if ($campaign) {
             $this->seedTestPlayers($campaign);
+            $this->seedTestDisplays($campaign);
         }
     }
 
@@ -187,7 +190,7 @@ class DevSeeder extends Seeder
                 'race_slug' => 'dwarf',
                 'class_slug' => 'fighter',
                 'level' => 3,
-                'experience_points' => 900,
+                'experience_points' => 2700, // Enough to level up to 4
                 'abilities' => [
                     'strength' => 16,
                     'dexterity' => 12,
@@ -196,12 +199,12 @@ class DevSeeder extends Seeder
                     'wisdom' => 13,
                     'charisma' => 8,
                 ],
-                'current_hp' => 31,
+                'current_hp' => 24, // Ранен в бою
                 'max_hp' => 31,
-                'temp_hp' => 0,
+                'temp_hp' => 5, // Временные ОЗ от барда
                 'armor_class' => 18,
                 'speed' => ['walk' => 7.5], // 25 ft in meters
-                'inspiration' => false,
+                'inspiration' => true, // Имеет вдохновение
                 'skill_proficiencies' => ['athletics', 'intimidation', 'perception'],
                 'skill_expertise' => [],
                 'saving_throw_proficiencies' => ['strength', 'constitution'],
@@ -219,11 +222,63 @@ class DevSeeder extends Seeder
                     ['source' => 'class', 'name' => 'Всплеск действий', 'description' => 'Дополнительное действие 1/отдых'],
                 ],
                 'class_resources' => [
-                    ['name' => 'Второе дыхание', 'current' => 1, 'max' => 1, 'recharge' => 'short_rest'],
+                    ['name' => 'Второе дыхание', 'current' => 0, 'max' => 1, 'recharge' => 'short_rest'], // использовано
                     ['name' => 'Всплеск действий', 'current' => 1, 'max' => 1, 'recharge' => 'short_rest'],
                 ],
                 'currency' => ['cp' => 0, 'sp' => 15, 'ep' => 0, 'gp' => 42, 'pp' => 0],
                 'is_alive' => true,
+                'is_active' => true, // Активный персонаж игрока
+                // Состояния D&D
+                'conditions' => [
+                    ['key' => 'frightened', 'name' => 'Испуган', 'source' => 'Драконий рык', 'duration' => 10, 'applied_at' => now()->toISOString()],
+                ],
+                // Кастомные правила (перки/увечья)
+                'custom_rules' => [
+                    [
+                        'id' => 'lost-eye-1',
+                        'name' => 'Потеря глаза',
+                        'description' => 'Левый глаз выбит в бою с огром',
+                        'icon' => '👁️',
+                        'color' => '#ef4444',
+                        'effects' => [
+                            ['type' => 'penalty', 'category' => 'skill', 'target' => 'perception', 'value' => -2, 'description' => '-2 Внимательность'],
+                            ['type' => 'bonus', 'category' => 'skill', 'target' => 'intimidation', 'value' => 1, 'description' => '+1 Запугивание'],
+                        ],
+                        'permanent' => true,
+                        'source' => 'Сессия #2: Нижний город',
+                        'applied_at' => now()->subDays(7)->toISOString(),
+                        'notes' => 'Носит повязку на глазу',
+                    ],
+                ],
+                // Инвентарь
+                'inventory' => [
+                    ['item_slug' => 'longsword', 'name' => 'Длинный меч', 'quantity' => 1],
+                    ['item_slug' => 'shield', 'name' => 'Щит', 'quantity' => 1],
+                    ['item_slug' => 'chain-mail', 'name' => 'Кольчуга', 'quantity' => 1],
+                    ['item_slug' => 'health-potion', 'name' => 'Зелье лечения', 'quantity' => 2, 'notes' => '2d4+2 ОЗ'],
+                    ['name' => 'Дварфский амулет', 'custom' => true, 'quantity' => 1, 'notes' => 'Семейная реликвия'],
+                    ['item_slug' => 'torch', 'name' => 'Факел', 'quantity' => 5],
+                    ['item_slug' => 'rations', 'name' => 'Рацион (дни)', 'quantity' => 3],
+                ],
+                // Экипировка
+                'equipment' => [
+                    'armor' => 'chain-mail',
+                    'main_hand' => 'longsword',
+                    'off_hand' => 'shield',
+                    'amulet' => 'dwarf-amulet',
+                ],
+                // Статистика
+                'stats' => [
+                    'sessions_played' => 3,
+                    'monsters_killed' => 12,
+                    'damage_dealt' => 156,
+                    'damage_taken' => 87,
+                    'critical_hits' => 4,
+                    'natural_ones' => 2,
+                    'potions_used' => 1,
+                    'gold_earned' => 95,
+                    'gold_spent' => 53,
+                ],
             ]
         );
 
@@ -288,7 +343,7 @@ class DevSeeder extends Seeder
             ]
         );
 
-        // Alive character for player 2
+        // Alive character for player 2 (Wizard with spells)
         Character::updateOrCreate(
             ['user_id' => $player2->id, 'campaign_id' => $campaign->id, 'name->ru' => 'Эльминстер'],
             [
@@ -306,22 +361,285 @@ class DevSeeder extends Seeder
                     'wisdom' => 12,
                     'charisma' => 10,
                 ],
-                'current_hp' => 18,
+                'current_hp' => 14, // Слегка ранен
                 'max_hp' => 18,
-                'armor_class' => 12,
+                'temp_hp' => 0,
+                'armor_class' => 12, // Mage armor не активен
                 'speed' => ['walk' => 9],
+                'inspiration' => false,
                 'skill_proficiencies' => ['arcana', 'history', 'investigation'],
+                'skill_expertise' => [],
                 'saving_throw_proficiencies' => ['intelligence', 'wisdom'],
+                'proficiencies' => [
+                    'armor' => [],
+                    'weapons' => ['dagger', 'dart', 'sling', 'quarterstaff', 'light-crossbow'],
+                    'tools' => [],
+                    'languages' => ['Общий', 'Эльфийский', 'Драконий'],
+                ],
                 'features' => [
+                    ['source' => 'race', 'name' => 'Бонусная черта', 'description' => 'Получаете одну черту по выбору на 1 уровне'],
                     ['source' => 'class', 'name' => 'Магия', 'description' => 'Подготовка и использование заклинаний волшебника'],
                     ['source' => 'class', 'name' => 'Магическое восстановление', 'description' => 'Восстановление ячеек на коротком отдыхе'],
                     ['source' => 'class', 'name' => 'Школа Воплощения', 'description' => 'Специализация в школе Воплощения'],
+                    ['source' => 'class', 'name' => 'Лепка заклинаний', 'description' => 'Союзники автоматически проходят спасброски от ваших заклинаний школы Воплощения'],
+                ],
+                'class_resources' => [
+                    ['name' => 'Магическое восстановление', 'current' => 0, 'max' => 1, 'recharge' => 'long_rest'],
                 ],
                 'currency' => ['cp' => 0, 'sp' => 5, 'ep' => 0, 'gp' => 28, 'pp' => 0],
                 'is_alive' => true,
+                'is_active' => true,
+                // Состояния
+                'conditions' => [
+                    ['key' => 'poisoned', 'name' => 'Отравлен', 'source' => 'Яд паука', 'duration' => 60, 'applied_at' => now()->toISOString()],
+                ],
+                // Кастомные правила
+                'custom_rules' => [
+                    [
+                        'id' => 'arcane-mark-1',
+                        'name' => 'Печать Аундэйра',
+                        'description' => 'Магическая печать академии на левой руке',
+                        'icon' => '✨',
+                        'color' => '#3b82f6',
+                        'effects' => [
+                            ['type' => 'bonus', 'category' => 'skill', 'target' => 'arcana', 'value' => 1, 'description' => '+1 Магия при проверках в библиотеках'],
+                        ],
+                        'permanent' => true,
+                        'source' => 'Обучение в Академии',
+                        'applied_at' => now()->subYears(1)->toISOString(),
+                    ],
+                ],
+                // Инвентарь
+                'inventory' => [
+                    ['item_slug' => 'quarterstaff', 'name' => 'Боевой посох', 'quantity' => 1],
+                    ['item_slug' => 'spellbook', 'name' => 'Книга заклинаний', 'quantity' => 1, 'notes' => '15 заклинаний записано'],
+                    ['item_slug' => 'component-pouch', 'name' => 'Сумка с компонентами', 'quantity' => 1],
+                    ['item_slug' => 'health-potion', 'name' => 'Зелье лечения', 'quantity' => 1],
+                    ['item_slug' => 'scroll', 'name' => 'Свиток: Обнаружение магии', 'quantity' => 1],
+                    ['name' => 'Кристалл-фокус', 'custom' => true, 'quantity' => 1, 'notes' => 'Аркановый фокус'],
+                ],
+                // Экипировка
+                'equipment' => [
+                    'main_hand' => 'quarterstaff',
+                ],
+                // Заклинания волшебника
+                'known_spells' => [
+                    // Заговоры
+                    'fire-bolt', 'light', 'mage-hand', 'prestidigitation',
+                    // 1 уровень
+                    'magic-missile', 'shield', 'mage-armor', 'detect-magic', 'identify', 'sleep',
+                    // 2 уровень
+                    'scorching-ray', 'misty-step',
+                ],
+                'prepared_spells' => [
+                    'fire-bolt', 'light', 'mage-hand', // заговоры всегда готовы
+                    'magic-missile', 'shield', 'mage-armor', 'detect-magic', // 1 уровень
+                    'scorching-ray', // 2 уровень
+                ],
+                'spell_slots_remaining' => [
+                    '1' => 2, // из 4 слотов 1 уровня использовано 2
+                    '2' => 1, // из 2 слотов 2 уровня использован 1
+                ],
+                // Мультикласс (для примера, что структура поддерживается)
+                'class_levels' => [
+                    'wizard' => 3,
+                ],
+                // Статистика
+                'stats' => [
+                    'sessions_played' => 3,
+                    'monsters_killed' => 6,
+                    'damage_dealt' => 78,
+                    'damage_taken' => 34,
+                    'critical_hits' => 1,
+                    'natural_ones' => 3,
+                    'potions_used' => 0,
+                    'gold_earned' => 80,
+                    'gold_spent' => 52,
+                ],
             ]
         );
 
         $this->command->info("Test player '{$player2->name}' created with 2 characters (1 alive, 1 dead).");
+
+        // Create test player 3 - Bard
+        $player3 = User::updateOrCreate(
+            ['email' => 'player3@test.com'],
+            [
+                'name' => 'Третий Игрок',
+                'password' => Hash::make('123'),
+                'email_verified_at' => now(),
+                'is_active' => true,
+            ]
+        );
+        $player3->assignRole('player');
+
+        if (!$campaign->hasPlayer($player3)) {
+            $campaign->players()->attach($player3->id, ['joined_at' => now()]);
+        }
+
+        // Bard character (active)
+        Character::updateOrCreate(
+            ['user_id' => $player3->id, 'campaign_id' => $campaign->id, 'name->ru' => 'Лира Песнь'],
+            [
+                'name' => ['ru' => 'Лира Песнь'],
+                'backstory' => ['ru' => 'Полуэльфийская бардесса, путешествующая по Кхорверу в поисках забытых легенд и древних песен.'],
+                'race_slug' => 'half-elf',
+                'class_slug' => 'bard',
+                'level' => 3,
+                'experience_points' => 900,
+                'abilities' => [
+                    'strength' => 10,
+                    'dexterity' => 14,
+                    'constitution' => 12,
+                    'intelligence' => 13,
+                    'wisdom' => 10,
+                    'charisma' => 17,
+                ],
+                'current_hp' => 21, // Полное здоровье
+                'max_hp' => 21,
+                'temp_hp' => 0,
+                'armor_class' => 14, // Кожаный + ЛОВ
+                'speed' => ['walk' => 9],
+                'inspiration' => false,
+                'skill_proficiencies' => ['persuasion', 'performance', 'deception', 'insight', 'perception', 'acrobatics'],
+                'skill_expertise' => ['persuasion', 'performance'], // Экспертиза барда
+                'saving_throw_proficiencies' => ['dexterity', 'charisma'],
+                'proficiencies' => [
+                    'armor' => ['light'],
+                    'weapons' => ['simple', 'hand-crossbow', 'longsword', 'rapier', 'shortsword'],
+                    'tools' => ['лютня', 'флейта', 'барабан'],
+                    'languages' => ['Общий', 'Эльфийский', 'Гномий'],
+                ],
+                'features' => [
+                    ['source' => 'race', 'name' => 'Тёмное зрение', 'description' => 'Видите в темноте на 18 м'],
+                    ['source' => 'race', 'name' => 'Наследие фей', 'description' => 'Преимущество на спасброски от очарования'],
+                    ['source' => 'class', 'name' => 'Бардовское вдохновение', 'description' => 'd6 для союзника, ХАР раз за отдых'],
+                    ['source' => 'class', 'name' => 'Мастер на все руки', 'description' => '+1 к проверкам навыков без владения'],
+                    ['source' => 'class', 'name' => 'Песнь отдыха', 'description' => '+1d6 ОЗ при коротком отдыхе'],
+                    ['source' => 'class', 'name' => 'Коллегия Знаний', 'description' => '3 дополнительных владения навыками'],
+                ],
+                'class_resources' => [
+                    ['name' => 'Бардовское вдохновение', 'current' => 2, 'max' => 3, 'recharge' => 'long_rest'],
+                ],
+                'currency' => ['cp' => 10, 'sp' => 25, 'ep' => 0, 'gp' => 65, 'pp' => 0],
+                'is_alive' => true,
+                'is_active' => true,
+                // Нет состояний - бард в порядке
+                'conditions' => [],
+                // Благословение за спасение NPC
+                'custom_rules' => [
+                    [
+                        'id' => 'blessing-storyteller-1',
+                        'name' => 'Благословение Рассказчика',
+                        'description' => 'Благословение от спасённого летописца Дома Сивис',
+                        'icon' => '📜',
+                        'color' => '#22c55e',
+                        'effects' => [
+                            ['type' => 'bonus', 'category' => 'skill', 'target' => 'history', 'value' => 2, 'description' => '+2 История'],
+                        ],
+                        'permanent' => false,
+                        'duration' => '30 дней',
+                        'source' => 'Квест: Спасение летописца',
+                        'applied_at' => now()->subDays(10)->toISOString(),
+                    ],
+                ],
+                // Инвентарь барда
+                'inventory' => [
+                    ['item_slug' => 'rapier', 'name' => 'Рапира', 'quantity' => 1],
+                    ['item_slug' => 'leather-armor', 'name' => 'Кожаный доспех', 'quantity' => 1],
+                    ['name' => 'Лютня мастерской работы', 'custom' => true, 'quantity' => 1, 'notes' => 'Бардовский фокус'],
+                    ['item_slug' => 'health-potion', 'name' => 'Зелье лечения', 'quantity' => 2],
+                    ['name' => 'Записная книжка с легендами', 'custom' => true, 'quantity' => 1],
+                    ['item_slug' => 'perfume', 'name' => 'Духи', 'quantity' => 1],
+                ],
+                // Экипировка
+                'equipment' => [
+                    'armor' => 'leather-armor',
+                    'main_hand' => 'rapier',
+                ],
+                // Заклинания барда
+                'known_spells' => [
+                    // Заговоры
+                    'vicious-mockery', 'minor-illusion',
+                    // 1 уровень
+                    'healing-word', 'faerie-fire', 'thunderwave', 'dissonant-whispers',
+                    // 2 уровень
+                    'suggestion', 'hold-person',
+                ],
+                'prepared_spells' => [], // Барды знают заклинания, не готовят
+                'spell_slots_remaining' => [
+                    '1' => 4, // Все слоты целы
+                    '2' => 2,
+                ],
+                'class_levels' => [
+                    'bard' => 3,
+                ],
+                // Статистика
+                'stats' => [
+                    'sessions_played' => 3,
+                    'monsters_killed' => 3,
+                    'damage_dealt' => 42,
+                    'damage_taken' => 18,
+                    'critical_hits' => 0,
+                    'natural_ones' => 1,
+                    'potions_used' => 0,
+                    'gold_earned' => 90,
+                    'gold_spent' => 25,
+                ],
+            ]
+        );
+
+        $this->command->info("Test player '{$player3->name}' created with character 'Лира Песнь'.");
+    }
+
+    private function seedTestDisplays(Campaign $campaign): void
+    {
+        $owner = User::whereHas('roles', fn($q) => $q->where('name', 'owner'))->first();
+
+        // 1. Display waiting for pairing (fresh, with valid code)
+        $waitingDisplay = DisplayToken::updateOrCreate(
+            ['token' => 'test-waiting-display-token'],
+            [
+                'code' => '1234',
+                'status' => DisplayToken::STATUS_WAITING,
+                'code_expires_at' => now()->addMinutes(5),
+                'metadata' => ['user_agent' => 'Test Browser', 'purpose' => 'testing'],
+            ]
+        );
+        $this->command->info("Waiting display created with code: {$waitingDisplay->code}");
+
+        // 2. Display already paired to campaign (online)
+        $pairedDisplay = DisplayToken::updateOrCreate(
+            ['token' => 'test-paired-display-token'],
+            [
+                'code' => '5678',
+                'campaign_id' => $campaign->id,
+                'user_id' => $owner->id,
+                'name' => 'Гостиная ТВ',
+                'status' => DisplayToken::STATUS_PAIRED,
+                'code_expires_at' => now()->subMinutes(10), // expired, but paired
+                'last_heartbeat_at' => now(), // alive
+                'metadata' => ['user_agent' => 'Smart TV Browser', 'purpose' => 'testing'],
+            ]
+        );
+        $this->command->info("Paired display '{$pairedDisplay->name}' created (online).");
+
+        // 3. Display paired but offline (old heartbeat)
+        $offlineDisplay = DisplayToken::updateOrCreate(
+            ['token' => 'test-offline-display-token'],
+            [
+                'code' => '9999',
+                'campaign_id' => $campaign->id,
+                'user_id' => $owner->id,
+                'name' => 'Спальня монитор',
+                'status' => DisplayToken::STATUS_PAIRED,
+                'code_expires_at' => now()->subMinutes(30),
+                'last_heartbeat_at' => now()->subMinutes(5), // offline (>60 sec)
+                'metadata' => ['user_agent' => 'Chrome', 'purpose' => 'testing'],
+            ]
+        );
+        $this->command->info("Paired display '{$offlineDisplay->name}' created (offline).");
+
+        $this->command->info('Test displays seeded.');
     }
 }

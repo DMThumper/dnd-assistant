@@ -16,14 +16,14 @@ export default function SheetRedirectPage() {
       const activeCharId = localStorage.getItem(ACTIVE_CHARACTER_KEY);
 
       if (activeCharId) {
-        window.location.href = `/player/sheet/${activeCharId}`;
+        router.replace(`/player/sheet/${activeCharId}`);
       } else {
-        window.location.href = "/player";
+        router.replace("/player");
       }
     }, 100);
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [router]);
 
   return (
     <div className="flex min-h-[50vh] items-center justify-center">

@@ -15,7 +15,31 @@
       "Bash(find:*)",
       "Bash(npm run build:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Campaign Control Center with tests\n\nTouch-friendly DM interface for managing active campaigns:\n\nFrontend:\n- Campaign Control page at /dashboard/campaign/[slug]/control\n- CharacterList and CharacterCard components with HP bars\n- CharacterControlPanel with 4 tabs \\(HP, Stats, Inventory, Spells\\)\n- HpControl with damage/healing/temp HP buttons\n- ConditionsControl for 20 D&D 5e conditions\n- CustomRulesControl for perks/afflictions with bonuses and penalties\n- ActionsPanel for quick actions \\(items, currency, inspiration, XP, kill\\)\n- View components: Abilities, Skills, SavingThrows, Inventory, Currency, Spells\n- XpAwardModal for awarding XP to one or all characters\n- UI components: Tabs, Dialog, Switch \\(Radix-based\\)\n\nBackend:\n- CharacterController with HP, conditions, custom rules, XP, items, currency endpoints\n- Factory classes for RuleSystem, Setting, Campaign, Character\n\nTests:\n- 30 tests covering all Campaign Control functionality\n- HP control, conditions, custom rules, XP award, currency, inspiration\n- Kill/activate/deactivate character with edge cases\n- Access control \\(DM vs player permissions\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Campaign Control Center with tests\n\nTouch-friendly DM interface for managing active campaigns:\n\nFrontend:\n- Campaign Control page at /dashboard/campaign/[slug]/control\n- CharacterList and CharacterCard components with HP bars\n- CharacterControlPanel with 4 tabs \\(HP, Stats, Inventory, Spells\\)\n- HpControl with damage/healing/temp HP buttons\n- ConditionsControl for 20 D&D 5e conditions\n- CustomRulesControl for perks/afflictions with bonuses and penalties\n- ActionsPanel for quick actions \\(items, currency, inspiration, XP, kill\\)\n- View components: Abilities, Skills, SavingThrows, Inventory, Currency, Spells\n- XpAwardModal for awarding XP to one or all characters\n- UI components: Tabs, Dialog, Switch \\(Radix-based\\)\n\nBackend:\n- CharacterController with HP, conditions, custom rules, XP, items, currency endpoints\n- Factory classes for RuleSystem, Setting, Campaign, Character\n\nTests:\n- 30 tests covering all Campaign Control functionality\n- HP control, conditions, custom rules, XP award, currency, inspiration\n- Kill/activate/deactivate character with edge cases\n- Access control \\(DM vs player permissions\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(docker ps:*)",
+      "Bash(taskkill /F /PID 18912)",
+      "Bash(npx tsc:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(xargs:*)",
+      "Bash(tasklist:*)",
+      "Bash(cmd //c \"taskkill /F /PID 18912\")",
+      "Bash(cmd //c \"taskkill /F /PID 28736\")",
+      "Bash(cmd //c \"taskkill /F /PID 12964\")",
+      "Bash(curl:*)",
+      "Bash(npm run docker:down:*)",
+      "Bash(docker logs:*)",
+      "WebFetch(domain:www.catieleary.com)",
+      "WebFetch(domain:reactflow.dev)",
+      "Bash(TOKEN=\"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIwMTljNjI0Zi1mOTFhLTcwYmQtYmUwZi00ZTZiNTEyYmJmNzciLCJqdGkiOiJiZGZlOWQ5NjZiMzk4OTc0ZGFhMDE5OGRjYjRiMjQ1ZGQzZDBhNjk5Yjc1NWJkNDBiNzQ1YTk5NDNlYWM5OGEyNGRkYmQ1Nzk2N2YzMjU0OCIsImlhdCI6MTc3MTE3NjA5Ny41NzQ4ODEsIm5iZiI6MTc3MTE3NjA5Ny41NzQ4ODMsImV4cCI6MTgwMjcxMjA5Ny41Njc1NjgsInN1YiI6IjEwMiIsInNjb3BlcyI6WyIqIl19.aV0AwzBwAhzF8K9sMr18oS2UY9R66jYKSlTpdlYsCLIlBgdkqJ92gdtVWeFKQ0gLYStrrpPuXmCC1qqoeATK1LObCCuR2r_M1Z_wmD60xzousoCuloYEnmc6NbsDlcp0gy0cFBkocbaSb1Hrt8EWs5S76KyQxQipVSALLCZQ8nFbiwCiVOb95rEzg1g7_GT7otP5N2tKYBulCaVMk-cRbG9CNcg4o2M3UPwAIaRARJ-kqZSBZgBPpbJwmH0MQe8PjRbzJESgrtPDQ-uGHQ0TaVh6fBo0XVGI4XSsWKFI04AiMJnP1k9wCf0fmPxxEDPlb8SaRXBFIxMpes8V8_aPnX_EHHwBMWFptK2_LcCvhy6sAGUb9oM2233aTUiHTru3uRBV7AFicXL1WhmJICihsodG6LJ6OD59L4jFBd56107rAT2T4z0qO0svDhIfCx8HA7ImT6zmPIbIq65rDeG2Y60-t83UTHPuMoGpbPSwYMi0REJjFQzYLkNZYvmSE_1vIQHYfLlw86I9WNEeUntiYZEJx3JmGtJbtVMn2GIsb3PiJ3Yn8IhvnJsd_jp5-IBMtQny_Rb_30Lyppp8L-ZQywrU2dge7e2CbxD9EWPm9avQqEZiaRv9Yh8Kq4o1QrGMV0R20VjU5DSq8uLii22W93zxuTzBBI8KAN5dW_2sxfc\")",
+      "Bash(__NEW_LINE_b7d231ef99d25052__ curl -s -X POST \"http://localhost:8000/api/v1/backoffice/characters/34/modify-hp\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"\"amount\"\": 3, \"\"type\"\": \"\"healing\"\"}')",
+      "Bash(echo:*)",
+      "Bash(findstr:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(npm run lint:*)"
     ]
   }
 }

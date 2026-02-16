@@ -31,7 +31,9 @@ export function initializeEcho(authToken: string): Echo<"reverb"> {
   const reverbPort = process.env.NEXT_PUBLIC_REVERB_PORT || "8080";
   const reverbKey = process.env.NEXT_PUBLIC_REVERB_APP_KEY || "dnd-reverb-key";
   const reverbScheme = process.env.NEXT_PUBLIC_REVERB_SCHEME || "http";
+  // Extract base URL without /api/v1 suffix for broadcasting auth
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const baseUrl = apiUrl.replace(/\/api\/v\d+$/, '');
 
   echoInstance = new Echo({
     broadcaster: "reverb",
@@ -41,7 +43,7 @@ export function initializeEcho(authToken: string): Echo<"reverb"> {
     wssPort: parseInt(reverbPort),
     forceTLS: reverbScheme === "https",
     enabledTransports: ["ws", "wss"],
-    authEndpoint: `${apiUrl}/broadcasting/auth`,
+    authEndpoint: `${baseUrl}/broadcasting/auth`,
     auth: {
       headers: {
         Authorization: `Bearer ${authToken}`,

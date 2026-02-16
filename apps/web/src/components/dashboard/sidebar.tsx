@@ -67,16 +67,24 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("dnd-sidebar-collapsed") === "true";
-    }
-    return false;
-  });
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
+  // Load collapsed state from localStorage after mount to avoid hydration mismatch
   useEffect(() => {
-    localStorage.setItem("dnd-sidebar-collapsed", String(isCollapsed));
-  }, [isCollapsed]);
+    const saved = localStorage.getItem("dnd-sidebar-collapsed");
+    if (saved === "true") {
+      setIsCollapsed(true);
+    }
+    setMounted(true);
+  }, []);
+
+  // Save collapsed state to localStorage
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem("dnd-sidebar-collapsed", String(isCollapsed));
+    }
+  }, [isCollapsed, mounted]);
 
   const isActive = (href: string) => {
     if (href === "/dashboard") {

@@ -32,17 +32,8 @@ php artisan storage:link --force || true
 echo "Running migrations..."
 php artisan migrate --force
 
-echo "Running base seeders..."
+echo "Running seeders (includes Passport setup)..."
 php artisan db:seed --force
-
-echo "Setting up Passport..."
-# Generate keys if not exist
-php artisan passport:keys --force || true
-# Create personal access client if not exists
-php artisan passport:client --personal --name="DnD Assistant Personal Access Client" --no-interaction 2>/dev/null || true
-
-echo "Running development seeders..."
-php artisan db:seed --class=DevSeeder --force 2>/dev/null || true
 
 echo "============================================"
 echo "D&D Assistant API ready!"

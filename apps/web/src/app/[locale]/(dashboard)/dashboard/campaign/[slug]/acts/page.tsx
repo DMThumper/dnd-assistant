@@ -39,6 +39,7 @@ import {
   Pencil,
   Trash2,
   ChevronRight,
+  Gamepad2,
 } from "lucide-react";
 
 const statusConfig = {
@@ -240,10 +241,18 @@ export default function ActsPage() {
             <p className="text-muted-foreground">Акты и сессии</p>
           </div>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Новый акт
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href={`/dashboard/campaign/${slug}/control`}>
+            <Button variant="outline">
+              <Gamepad2 className="h-4 w-4 mr-2" />
+              Центр управления
+            </Button>
+          </Link>
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Новый акт
+          </Button>
+        </div>
       </div>
 
       {/* Acts List */}

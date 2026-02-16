@@ -77,19 +77,25 @@ export function XpAwardModal({
     setIsLoading(true);
     try {
       const response = await api.awardXp(campaignId, targetIds, parsedAmount, reason || undefined);
-      const result = response.data.result;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = response.data as any;
 
       // Build success message
-      const leveledUp = result.characters.filter(c => c.leveled_up);
+      const results = data.results || [];
+      const count = data.characters_count || results.length;
+      const leveledUp = results.filter((c: { can_level_up?: boolean }) => c.can_level_up);
+
       if (leveledUp.length > 0) {
         toast.success(
-          `${result.awarded_to} персонаж(ей) получают ${parsedAmount} XP!`,
+          `${count} персонаж(ей) получают ${parsedAmount} XP!`,
           {
-            description: `${leveledUp.map(c => `${c.name} → ${c.new_level} ур.`).join(", ")}`,
+            description: leveledUp.map((c: { character_name: string; new_level?: number }) =>
+              `${c.character_name} может повысить уровень!`
+            ).join(", "),
           }
         );
       } else {
-        toast.success(`${result.awarded_to} персонаж(ей) получают ${parsedAmount} XP`);
+        toast.success(`${count} персонаж(ей) получают ${parsedAmount} XP`);
       }
 
       onSuccess();

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api, ApiClientError } from "@/lib/api";
-import type { Character } from "@/types/game";
+import type { Character, Condition, LiveSession } from "@/types/game";
 import { cn, formatModifier, calculateModifier } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,41 @@ import {
   Footprints,
   Sparkles,
   Zap,
+  Star,
+  TrendingUp,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Radio,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { useCharacterSync } from "@/hooks/useCharacterSync";
+import { useCampaignSync } from "@/hooks/useCampaignSync";
+import { toast } from "sonner";
+
+// XP thresholds for D&D 5e levels
+const XP_THRESHOLDS: Record<number, number> = {
+  1: 0,
+  2: 300,
+  3: 900,
+  4: 2700,
+  5: 6500,
+  6: 14000,
+  7: 23000,
+  8: 34000,
+  9: 48000,
+  10: 64000,
+  11: 85000,
+  12: 100000,
+  13: 120000,
+  14: 140000,
+  15: 165000,
+  16: 195000,
+  17: 225000,
+  18: 265000,
+  19: 305000,
+  20: 355000,
+};
 
 // Ability keys for iteration
 const ABILITIES = [
@@ -46,6 +80,89 @@ export default function CharacterSheetPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
+
+  // Real-time sync with DM via WebSocket
+  const { isConnected } = useCharacterSync(character ? characterId : null, {
+    onCharacterUpdated: (payload) => {
+      // Update character with DM's changes
+      setCharacter(payload.character);
+      if (payload.update_type === "hp") {
+        const changes = payload.changes as { type?: string; amount?: number };
+        if (changes.type === "damage") {
+          toast.error(`Получено ${changes.amount} урона`);
+        } else if (changes.type === "healing") {
+          toast.success(`Исцелено ${changes.amount} HP`);
+        }
+      }
+    },
+    onXPAwarded: (payload) => {
+      setCharacter((prev) =>
+        prev ? { ...prev, experience_points: payload.total_xp } : null
+      );
+      toast.success(`+${payload.xp_amount} XP${payload.reason ? `: ${payload.reason}` : ""}`, {
+        duration: 5000,
+      });
+      if (payload.can_level_up) {
+        toast.info("Доступно повышение уровня!", {
+          duration: 10000,
+          icon: "🎉",
+        });
+      }
+    },
+    onConditionChanged: (payload) => {
+      setCharacter((prev) =>
+        prev ? { ...prev, conditions: payload.all_conditions as Condition[] } : null
+      );
+      const action = payload.action === "added" ? "Добавлено" : "Убрано";
+      const conditionName = payload.condition.name || payload.condition.key;
+      if (payload.action === "added") {
+        toast.warning(`${action}: ${conditionName}`);
+      } else {
+        toast.info(`${action}: ${conditionName}`);
+      }
+    },
+    onLevelUp: (payload) => {
+      setCharacter(payload.character);
+      toast.success(`Уровень повышен до ${payload.new_level}!`, {
+        duration: 10000,
+        icon: "🎉",
+      });
+    },
+    onCustomRuleChanged: (payload) => {
+      // Refresh character to get updated custom rules
+      void fetchCharacterSilent();
+      const action = payload.action === "added" ? "Добавлен" : payload.action === "removed" ? "Убран" : "Изменён";
+      toast.info(`${action} эффект: ${payload.custom_rule.name}`);
+    },
+  });
+
+  // Listen for live session events from campaign channel
+  useCampaignSync(character?.campaign_id || null, {
+    onLiveSessionStarted: (payload) => {
+      setLiveSession(payload.live_session);
+      toast.success("DM запустил сессию!", {
+        duration: 5000,
+        icon: "🎲",
+      });
+    },
+    onLiveSessionEnded: (payload) => {
+      setLiveSession(null);
+      toast.info("Сессия завершена", {
+        duration: 5000,
+      });
+    },
+  });
+
+  // Silent fetch without loading state (for WebSocket-triggered refreshes)
+  const fetchCharacterSilent = useCallback(async () => {
+    try {
+      const response = await api.getCharacter(characterId);
+      setCharacter(response.data.character);
+    } catch (err) {
+      console.error("Failed to refresh character:", err);
+    }
+  }, [characterId]);
 
   const fetchCharacter = useCallback(async () => {
     try {
@@ -53,6 +170,16 @@ export default function CharacterSheetPage() {
       setCharacter(response.data.character);
       // Save active character ID for spells/inventory pages
       localStorage.setItem(ACTIVE_CHARACTER_KEY, String(characterId));
+
+      // Fetch live session status for the campaign
+      try {
+        const sessionResponse = await api.getPlayerLiveSessionStatus(response.data.character.campaign_id);
+        if (sessionResponse.data.has_active_session) {
+          setLiveSession(sessionResponse.data.live_session);
+        }
+      } catch (sessionErr) {
+        console.warn("Failed to fetch live session status:", sessionErr);
+      }
     } catch (err) {
       if (err instanceof ApiClientError) {
         setError(err.message);
@@ -129,6 +256,16 @@ export default function CharacterSheetPage() {
         ? "bg-warning"
         : "bg-success";
 
+  // XP calculations
+  const currentLevel = character.level;
+  const nextLevel = currentLevel + 1;
+  const currentLevelXp = XP_THRESHOLDS[currentLevel] || 0;
+  const nextLevelXp = XP_THRESHOLDS[nextLevel] || XP_THRESHOLDS[20];
+  const xpInCurrentLevel = character.experience_points - currentLevelXp;
+  const xpNeededForNextLevel = nextLevelXp - currentLevelXp;
+  const xpProgress = currentLevel >= 20 ? 100 : (xpInCurrentLevel / xpNeededForNextLevel) * 100;
+  const canLevelUp = character.experience_points >= nextLevelXp && currentLevel < 20;
+
   return (
     <div className="p-4 space-y-4 pb-20">
       {/* Character Header */}
@@ -141,7 +278,27 @@ export default function CharacterSheetPage() {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-xl font-bold">{character.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold">{character.name}</h1>
+            {liveSession ? (
+              <Badge
+                variant="outline"
+                className="bg-green-500/10 border-green-500/30 text-green-400 text-xs animate-pulse"
+                title="Сессия активна"
+              >
+                <Radio className="mr-1 h-3 w-3" />
+                Live
+              </Badge>
+            ) : (
+              <span title={isConnected ? "Подключено к серверу" : "Нет подключения"}>
+                {isConnected ? (
+                  <Wifi className="h-4 w-4 text-green-500" />
+                ) : (
+                  <WifiOff className="h-4 w-4 text-muted-foreground" />
+                )}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">
             {character.race_slug && (
               <span className="capitalize">{character.race_slug}</span>
@@ -164,6 +321,56 @@ export default function CharacterSheetPage() {
           <Sparkles className={cn("h-4 w-4", character.inspiration && "text-yellow-300")} />
         </Button>
       </div>
+
+      {/* XP Progress Section */}
+      <Card className={cn("bg-card/50", canLevelUp && "border-yellow-500 border-2")}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500" />
+              <span className="font-semibold">Опыт (XP)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => fetchCharacter()}
+                disabled={isLoading}
+                title="Обновить"
+              >
+                <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+              </Button>
+              <span className="text-xl font-bold text-yellow-500">
+                {character.experience_points.toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {currentLevel < 20 ? (
+            <>
+              <div className="flex items-center justify-between text-sm text-muted-foreground mb-1">
+                <span>До уровня {nextLevel}</span>
+                <span>{xpInCurrentLevel.toLocaleString()} / {xpNeededForNextLevel.toLocaleString()}</span>
+              </div>
+              <Progress value={xpProgress} className="h-3" />
+              {canLevelUp && (
+                <Button
+                  onClick={() => router.push(`/player/sheet/${characterId}/level-up`)}
+                  className="mt-2 w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold animate-pulse"
+                >
+                  <TrendingUp className="mr-2 h-5 w-5" />
+                  Повысить уровень!
+                </Button>
+              )}
+            </>
+          ) : (
+            <div className="text-center text-muted-foreground">
+              Максимальный уровень достигнут
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* HP Section - Most Important! */}
       <Card className="bg-card/50">
@@ -231,6 +438,67 @@ export default function CharacterSheetPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Conditions (if any) */}
+      {character.conditions && character.conditions.length > 0 && (
+        <Card className="bg-orange-500/10 border-orange-500/30">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="h-4 w-4 text-orange-500" />
+              <span className="font-semibold text-orange-500">Состояния</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {character.conditions.map((condition, index) => (
+                <Badge
+                  key={index}
+                  variant="outline"
+                  className="bg-orange-500/20 border-orange-500/50 text-orange-200"
+                >
+                  {condition.name || condition.key}
+                  {condition.source && (
+                    <span className="text-orange-400/70 ml-1">({condition.source})</span>
+                  )}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Custom Rules (perks/afflictions) */}
+      {character.custom_rules && character.custom_rules.length > 0 && (
+        <Card className="bg-card/50">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="font-semibold">Особые эффекты</span>
+            </div>
+            <div className="space-y-2">
+              {character.custom_rules.map((rule) => (
+                <div
+                  key={rule.id}
+                  className="flex items-start gap-2 text-sm"
+                >
+                  <span>{rule.icon || "✦"}</span>
+                  <div>
+                    <span className="font-medium" style={{ color: rule.color }}>
+                      {rule.name}
+                    </span>
+                    {rule.effects && rule.effects.length > 0 && (
+                      <div className="text-muted-foreground text-xs">
+                        {rule.effects.map((effect, i) => (
+                          <span key={i} className={effect.type === "bonus" ? "text-green-400" : "text-red-400"}>
+                            {effect.description}{i < rule.effects.length - 1 ? ", " : ""}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Stats Row */}
       <div className="grid grid-cols-3 gap-2">

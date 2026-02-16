@@ -40,6 +40,7 @@ import {
   Trash2,
   GripVertical,
   MoveRight,
+  Gamepad2,
 } from "lucide-react";
 
 const statusConfig = {
@@ -297,10 +298,18 @@ export default function SessionsPage() {
             <p className="text-muted-foreground">Сессии акта</p>
           </div>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Новая сессия
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href={`/dashboard/campaign/${slug}/control`}>
+            <Button variant="outline">
+              <Gamepad2 className="h-4 w-4 mr-2" />
+              Центр управления
+            </Button>
+          </Link>
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Новая сессия
+          </Button>
+        </div>
       </div>
 
       {/* Act description */}
@@ -428,13 +437,15 @@ export default function SessionsPage() {
                         </Button>
                       )}
                     </div>
-                    {/* Future: Link to scene editor */}
-                    {/* <Link href={`/dashboard/campaign/${slug}/acts/${actId}/sessions/${session.id}/scenes`}>
-                      <Button variant="ghost" size="sm">
-                        Сцены
-                        <ChevronRight className="h-4 w-4 ml-1" />
+                    <Link
+                      href={`/dashboard/campaign/${slug}/control`}
+                      target="_blank"
+                    >
+                      <Button size="sm">
+                        <Gamepad2 className="h-3 w-3 mr-1" />
+                        Запустить сессию
                       </Button>
-                    </Link> */}
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

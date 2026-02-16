@@ -65,6 +65,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void fetchUser();
   }, [fetchUser]);
 
+  // Listen for unauthorized events from API client
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      setAccessToken(null);
+      // Use replace to avoid back button issues
+      router.replace("/login");
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
+  }, [router]);
+
   const login = async (email: string, password: string) => {
     const response = await api.login(email, password);
     const { user: userData } = response.data;

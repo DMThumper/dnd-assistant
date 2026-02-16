@@ -31,6 +31,11 @@ import type {
   DisplayStatusResponse,
   DisplayPairRequest,
   DisplayCommandRequest,
+  LevelUpCheckResponse,
+  LevelUpOptionsResponse,
+  LevelUpChoices,
+  LiveSession,
+  LiveSessionStatusResponse,
 } from "@/types/game";
 import type {
   CharacterCreationData,
@@ -128,11 +133,13 @@ class ApiClient {
 
     const response = await fetch(`${API_URL}${endpoint}`, config);
 
-    // Handle 401 Unauthorized - redirect to login
+    // Handle 401 Unauthorized - clear token and throw error
+    // The AuthContext will handle redirect via router.push()
     if (response.status === 401) {
       this.setToken(null);
-      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
-        window.location.href = "/login";
+      // Dispatch custom event for AuthContext to handle
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("auth:unauthorized"));
       }
       throw new ApiClientError("Unauthorized", 401);
     }
@@ -293,6 +300,22 @@ class ApiClient {
   async deleteCharacter(characterId: number) {
     return this.request<{ message: string }>(`/player/characters/${characterId}`, {
       method: "DELETE",
+    });
+  }
+
+  // Level-up endpoints
+  async checkLevelUp(characterId: number) {
+    return this.request<LevelUpCheckResponse>(`/player/characters/${characterId}/level-up/check`);
+  }
+
+  async getLevelUpOptions(characterId: number) {
+    return this.request<LevelUpOptionsResponse>(`/player/characters/${characterId}/level-up/options`);
+  }
+
+  async levelUp(characterId: number, choices: LevelUpChoices) {
+    return this.request<CharacterResponse>(`/player/characters/${characterId}/level-up`, {
+      method: "POST",
+      body: choices,
     });
   }
 
@@ -536,11 +559,15 @@ class ApiClient {
     amount: number,
     reason?: string
   ) {
+    const body = characterIds === "all_active"
+      ? { all_active: true, amount, reason }
+      : { character_ids: characterIds, amount, reason };
+
     return this.request<{ result: XpAwardResult }>(
       `/backoffice/campaigns/${campaignId}/characters/award-xp`,
       {
         method: "POST",
-        body: { character_ids: characterIds, amount, reason },
+        body,
       }
     );
   }
@@ -940,6 +967,62 @@ class ApiClient {
         Authorization: `Bearer ${token}`,
       },
     });
+  }
+
+  // ===========================================================================
+  // Live Session (Real-time Game Session Management)
+  // ===========================================================================
+
+  /**
+   * Get live session status for a campaign (DM)
+   */
+  async getLiveSessionStatus(campaignId: number) {
+    return this.request<LiveSessionStatusResponse>(
+      `/backoffice/campaigns/${campaignId}/live-session`
+    );
+  }
+
+  /**
+   * Start a live session (DM only)
+   */
+  async startLiveSession(campaignId: number, gameSessionId?: number) {
+    return this.request<LiveSession>(
+      `/backoffice/campaigns/${campaignId}/live-session/start`,
+      {
+        method: "POST",
+        body: gameSessionId ? { game_session_id: gameSessionId } : {},
+      }
+    );
+  }
+
+  /**
+   * Stop a live session (DM only)
+   */
+  async stopLiveSession(campaignId: number) {
+    return this.request<LiveSession>(
+      `/backoffice/campaigns/${campaignId}/live-session/stop`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  /**
+   * Get live session history for a campaign
+   */
+  async getLiveSessionHistory(campaignId: number) {
+    return this.request<LiveSession[]>(
+      `/backoffice/campaigns/${campaignId}/live-session/history`
+    );
+  }
+
+  /**
+   * Get live session status for a campaign (Player)
+   */
+  async getPlayerLiveSessionStatus(campaignId: number) {
+    return this.request<LiveSessionStatusResponse>(
+      `/player/campaigns/${campaignId}/live-session`
+    );
   }
 }
 

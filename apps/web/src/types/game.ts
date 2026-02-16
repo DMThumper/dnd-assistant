@@ -23,6 +23,8 @@ export interface Campaign {
   owner: CampaignOwner;
   players_count: number;
   characters_count: number;
+  has_active_live_session?: boolean;
+  live_session?: LiveSession | null;
   created_at: string;
   updated_at: string;
 }
@@ -434,6 +436,56 @@ export interface MoveSessionRequest {
 }
 
 // ===========================================================================
+// Live Session (Real-time Game Session)
+// ===========================================================================
+
+// Live session participant
+export interface LiveSessionParticipant {
+  user_id: number;
+  character_id: number | null;
+  joined_at: string;
+}
+
+// Live session (active game session)
+export interface LiveSession {
+  id: number;
+  campaign_id: number;
+  game_session_id: number | null;
+  started_by: {
+    id: number;
+    name: string;
+  };
+  started_at: string;
+  ended_at: string | null;
+  is_active: boolean;
+  participants: LiveSessionParticipant[];
+  duration_minutes: number | null;
+}
+
+// Live session status response
+export interface LiveSessionStatusResponse {
+  has_active_session: boolean;
+  live_session: LiveSession | null;
+}
+
+// Live session started event payload
+export interface LiveSessionStartedPayload {
+  live_session: LiveSession;
+  campaign_id: number;
+  started_by: {
+    id: number;
+    name: string;
+  };
+}
+
+// Live session ended event payload
+export interface LiveSessionEndedPayload {
+  live_session: LiveSession;
+  campaign_id: number;
+  duration_minutes: number | null;
+}
+
+// ===========================================================================
 // Display (TV/Monitor Control)
 // ===========================================================================
 
@@ -500,4 +552,91 @@ export interface DisplayCommandPayload {
 export interface DisplayCommandRequest {
   command: DisplayCommandType;
   payload?: DisplayCommandPayload;
+}
+
+// ===========================================================================
+// Level Up Types
+// ===========================================================================
+
+// Level up check response
+export interface LevelUpCheckResponse {
+  can_level_up: boolean;
+  reason?: string;
+  current_level: number;
+  current_xp: number;
+  next_level: number;
+  xp_required: number;
+  xp_remaining: number;
+  max_level?: number;
+}
+
+// HP options for level up
+export interface LevelUpHpOptions {
+  method: "average" | "roll";
+  hit_die: string;
+  constitution_modifier: number;
+  average_hp: number;
+  max_roll: number;
+  min_hp: number;
+}
+
+// Class option for multiclass
+export interface LevelUpClassOption {
+  current: boolean;
+  meets_prerequisites: boolean;
+  prerequisites?: Record<string, number | Record<string, number>>; // e.g. { "strength": 13, "or": {"dexterity": 13, "strength": 13} }
+  name?: string; // Class name in Russian
+}
+
+// ASI ability option
+export interface AsiAbilityOption {
+  key: string;
+  name: string;
+  current: number;
+  can_increase: boolean;
+}
+
+// ASI options
+export interface LevelUpAsiOptions {
+  points: number;
+  max_per_ability: number;
+  abilities: AsiAbilityOption[];
+}
+
+// Class feature from level up
+export interface LevelUpFeature {
+  name: string;
+  description: string;
+  type?: "feature" | "choice" | "subclass" | "asi";
+  options?: string[];
+}
+
+// Level up options response
+export interface LevelUpOptionsResponse {
+  new_level: number;
+  proficiency_bonus: number;
+  hp_options: LevelUpHpOptions;
+  class_options: {
+    multiclass_enabled: boolean;
+    available_classes: Record<string, LevelUpClassOption>;
+  };
+  asi_available: boolean;
+  asi_options?: {
+    asi: LevelUpAsiOptions;
+    feats_enabled: boolean;
+    feats?: Array<{ slug: string; name: string; description: string }>;
+  };
+  features: LevelUpFeature[];
+}
+
+// Level up choices (request body)
+export interface LevelUpChoices {
+  class?: string;
+  hp_roll?: number;
+  asi?: {
+    type: "asi" | "feat";
+    choices?: Record<string, number> | { feat: string };
+  };
+  subclass?: string;
+  features?: LevelUpFeature[];
 }

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1\Player;
 
+use App\Events\CharacterUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\Character;
 use App\Models\CharacterClass;
 use App\Models\Race;
+use App\Services\CharacterService;
 use App\Services\LevelUpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,7 +17,8 @@ use Illuminate\Validation\ValidationException;
 class CharacterController extends Controller
 {
     public function __construct(
-        private readonly LevelUpService $levelUpService
+        private readonly LevelUpService $levelUpService,
+        private readonly CharacterService $characterService
     ) {}
 
     /**
@@ -77,6 +80,7 @@ class CharacterController extends Controller
 
     /**
      * Update character (HP, resources, etc.)
+     * Broadcasts changes to DM via WebSocket
      */
     public function update(Request $request, Character $character): JsonResponse
     {
@@ -99,12 +103,31 @@ class CharacterController extends Controller
             'currency' => 'sometimes|array',
         ]);
 
-        // Prevent HP from exceeding max
+        // Handle HP changes via CharacterService (triggers broadcast)
         if (isset($validated['current_hp'])) {
-            $validated['current_hp'] = min($validated['current_hp'], $character->max_hp);
+            $targetHp = min($validated['current_hp'], $character->max_hp);
+            $delta = $targetHp - $character->current_hp;
+
+            if ($delta !== 0) {
+                $type = $delta > 0 ? 'healing' : 'damage';
+                $this->characterService->modifyHp($character, abs($delta), $type);
+            }
+
+            unset($validated['current_hp']);
         }
 
-        $character->update($validated);
+        // Handle other fields with generic broadcast
+        if (! empty($validated)) {
+            $changes = [];
+            foreach ($validated as $key => $value) {
+                $changes[$key] = ['from' => $character->{$key}, 'to' => $value];
+            }
+
+            $character->update($validated);
+
+            // Broadcast to DM (toOthers prevents echo back to player)
+            broadcast(new CharacterUpdated($character->fresh(), 'player_update', $changes))->toOthers();
+        }
 
         return response()->json([
             'success' => true,

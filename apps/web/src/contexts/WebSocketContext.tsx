@@ -18,6 +18,7 @@ interface WebSocketContextType {
   isConnected: boolean;
   subscribeToCharacter: (characterId: number) => Channel | null;
   subscribeToCampaign: (campaignId: number) => PresenceChannel | null;
+  subscribeToCampaignPrivate: (campaignId: number) => Channel | null;
   subscribeToCampaignBattle: (campaignId: number) => Channel | null;
   unsubscribe: (channelName: string) => void;
 }
@@ -66,13 +67,24 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     []
   );
 
-  // Subscribe to campaign presence channel
+  // Subscribe to campaign presence channel (for who's online)
   const subscribeToCampaign = useCallback(
     (campaignId: number): PresenceChannel | null => {
       const echoInstance = getEcho();
       if (!echoInstance) return null;
 
       return echoInstance.join(`campaign.${campaignId}`);
+    },
+    []
+  );
+
+  // Subscribe to campaign private channel (for events like XP, level up, HP changes)
+  const subscribeToCampaignPrivate = useCallback(
+    (campaignId: number): Channel | null => {
+      const echoInstance = getEcho();
+      if (!echoInstance) return null;
+
+      return echoInstance.private(`campaign.${campaignId}`);
     },
     []
   );
@@ -103,6 +115,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         isConnected,
         subscribeToCharacter,
         subscribeToCampaign,
+        subscribeToCampaignPrivate,
         subscribeToCampaignBattle,
         unsubscribe,
       }}
