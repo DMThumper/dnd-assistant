@@ -64,6 +64,73 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Монорепозиторий с архитектурой, основанной на reference-проекте XStream (`C:\Projects\xstream-next`).
 
+## Quick Start (для запуска на новом компьютере)
+
+### Требования
+- Docker Desktop (для Windows/Mac) или Docker + docker-compose (Linux)
+- Node.js 22 LTS
+- Git
+
+### Первый запуск
+
+```bash
+# 1. Клонировать репозиторий
+git clone https://github.com/DMThumper/dnd-assistant.git
+cd dnd-assistant
+
+# 2. Скопировать env файлы
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.local.example apps/web/.env.local
+
+# 3. Запустить Docker (API + PostgreSQL + Redis + WebSocket)
+npm run docker:up
+# Подождать ~2 минуты при первом запуске (миграции, сидеры, генерация ключей)
+
+# 4. Установить зависимости фронтенда и запустить
+cd apps/web && npm install && npm run dev
+```
+
+### Что делает `npm run docker:up`:
+- Поднимает PostgreSQL 17, Redis 7, Mailpit (email testing)
+- Собирает и запускает Laravel API на порту 8000
+- Автоматически запускает миграции и сидеры
+- Создаёт owner аккаунт (логин/пароль из .env)
+- Генерирует Passport OAuth ключи
+- Запускает queue worker для фоновых задач
+
+### После запуска:
+- **API**: http://localhost:8000
+- **Frontend**: http://localhost:3000
+- **Mailpit (email UI)**: http://localhost:8025
+- **pgAdmin**: http://localhost:5050
+
+### Учётные данные по умолчанию (из .env.example):
+- **Owner**: owner@example.com / password
+- **Player** (тестовый): player@example.com / password
+
+### Полезные команды:
+```bash
+# Логи API контейнера
+docker logs dnd_api -f
+
+# Зайти в контейнер API
+docker exec -it dnd_api bash
+
+# Перезапустить контейнер (после изменений в PHP)
+docker restart dnd_api
+
+# Сбросить всё и начать с нуля (УДАЛЯЕТ ДАННЫЕ)
+npm run docker:reset && npm run docker:up
+```
+
+### WebSocket (Laravel Reverb)
+WebSocket сервер запускается автоматически в контейнере API на порту 8080. Конфигурация для фронтенда уже настроена в `.env.local.example`.
+
+### Известные проблемы:
+1. **Windows + WSL2**: Убедитесь что Docker Desktop использует WSL2 backend
+2. **Первый запуск медленный**: Первая сборка образов может занять 3-5 минут
+3. **Port already in use**: Остановите другие сервисы на портах 8000, 3000, 5432, 6379
+
 ## Tech Stack
 
 Новый проект — используем последние стабильные версии всех технологий (февраль 2026).
@@ -2563,6 +2630,51 @@ AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 PASSPORT_PRIVATE_KEY_BASE64, PASSPORT_PUBLIC_KEY_BASE64
 OWNER_NAME, OWNER_EMAIL, OWNER_PASSWORD
 ```
+
+## Current Status (Февраль 2026)
+
+### Что реализовано:
+
+**Backend (Laravel API):**
+- Auth система (login, register, OAuth2 tokens через Passport)
+- Roles & Permissions (owner, dm, player)
+- RuleSystem + Settings (D&D 5e + Eberron с сидерами)
+- Campaigns CRUD с привязкой к сеттингам
+- Acts & Sessions management
+- Characters CRUD с полной структурой D&D 5e
+- Live Sessions (start/stop/status)
+- WebSocket broadcasting через Laravel Reverb (presence channels, private channels)
+- Character HP/XP/Conditions updates с WebSocket уведомлениями
+- Level Up API с автоматическим расчётом HP
+
+**Frontend (Next.js):**
+- Auth flow с AuthContext
+- Player client: выбор кампании, выбор персонажа, лист персонажа
+- DM Dashboard: список кампаний, детали кампании
+- DM Control Panel: управление персонажами (HP, XP, conditions, custom rules)
+- WebSocket интеграция:
+  - Presence channel для отображения онлайн игроков
+  - Real-time обновление HP/XP/conditions между DM и Player
+  - Live Session management (start/stop)
+  - Connection status indicators (Live/Connected/Disconnected/Offline)
+- Level Up flow для игроков
+- OnlinePlayersIndicator для DM
+
+**Работает:**
+- DM может запустить Live Session
+- DM видит кто из игроков онлайн
+- DM может менять HP/XP/conditions персонажам — игроки видят изменения мгновенно
+- Игроки видят свой лист персонажа с актуальными данными
+- Игроки могут делать Level Up
+
+### Что НЕ реализовано (TODO):
+- Display Client (TV mode)
+- Battle Tracker
+- Inventory management UI
+- Spellbook UI
+- Dice roller
+- Scene Editor
+- Character creation wizard (базовый шаблон есть, но не wizard)
 
 ## Development Priority
 
