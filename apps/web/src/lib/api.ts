@@ -974,11 +974,20 @@ class ApiClient {
   // ===========================================================================
 
   /**
-   * Get live session status for a campaign (DM)
+   * Get live session status for a campaign (DM - backoffice)
    */
   async getLiveSessionStatus(campaignId: number) {
     return this.request<LiveSessionStatusResponse>(
       `/backoffice/campaigns/${campaignId}/live-session`
+    );
+  }
+
+  /**
+   * Get live session status for a campaign (Player)
+   */
+  async getPlayerLiveSessionStatus(campaignId: number) {
+    return this.request<LiveSessionStatusResponse>(
+      `/player/campaigns/${campaignId}/live-session`
     );
   }
 
@@ -1016,14 +1025,6 @@ class ApiClient {
     );
   }
 
-  /**
-   * Get live session status for a campaign (Player)
-   */
-  async getPlayerLiveSessionStatus(campaignId: number) {
-    return this.request<LiveSessionStatusResponse>(
-      `/player/campaigns/${campaignId}/live-session`
-    );
-  }
 }
 
 export class ApiClientError extends Error {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api, ApiClientError } from "@/lib/api";
+import { usePlayerSession } from "@/contexts/PlayerSessionContext";
 import type { Character, PlayerCampaign } from "@/types/game";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,11 +38,13 @@ export default function CampaignCharactersPage() {
   const t = useTranslations();
   const router = useRouter();
   const params = useParams();
+  const { clearActiveCharacter } = usePlayerSession();
   const campaignId = Number(params.id);
 
   const [campaign, setCampaign] = useState<PlayerCampaign | null>(null);
   const [aliveCharacters, setAliveCharacters] = useState<Character[]>([]);
   const [deadCharacters, setDeadCharacters] = useState<Character[]>([]);
+  const [showExperiments, setShowExperiments] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +53,12 @@ export default function CampaignCharactersPage() {
   const [deleteDialog, setDeleteDialog] = useState<Character | null>(null);
   const [isActivating, setIsActivating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Clear active character when on character selection page
+  // This ensures we don't show as "online" in presence channel from a previous session
+  useEffect(() => {
+    clearActiveCharacter();
+  }, [clearActiveCharacter]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -131,6 +140,10 @@ export default function CampaignCharactersPage() {
     }
   };
 
+  // Separate active and inactive (experiments) characters
+  const activeCharacters = aliveCharacters.filter(c => c.is_active);
+  const experimentCharacters = aliveCharacters.filter(c => !c.is_active);
+
   const handleSelectCharacter = (character: Character) => {
     router.push(`/player/sheet/${character.id}`);
   };
@@ -191,33 +204,60 @@ export default function CampaignCharactersPage() {
         </div>
       )}
 
-      {/* Alive characters */}
-      {aliveCharacters.length > 0 && (
+      {/* Active characters */}
+      {activeCharacters.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold mb-3">
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Crown className="h-5 w-5 text-primary" />
             {t("player.characters.title")}
           </h2>
           <div className="grid gap-3">
-            {aliveCharacters.map((character) => (
+            {activeCharacters.map((character) => (
               <CharacterCard
                 key={character.id}
                 character={character}
-                hasActiveCharacter={aliveCharacters.some(c => c.is_active)}
+                hasActiveCharacter={true}
                 onSelect={() => handleSelectCharacter(character)}
                 onActivate={() => setActivateDialog(character)}
                 onDelete={() => setDeleteDialog(character)}
               />
             ))}
           </div>
-          <Button
-            variant="outline"
-            className="w-full mt-3"
-            onClick={handleCreateCharacter}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            {t("player.characters.createNew")}
-          </Button>
         </section>
+      )}
+
+      {/* Inactive characters ready for activation */}
+      {experimentCharacters.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Swords className="h-5 w-5 text-muted-foreground" />
+            Готовы к игре
+          </h2>
+          <div className="grid gap-3">
+            {experimentCharacters.map((character) => (
+              <CharacterCard
+                key={character.id}
+                character={character}
+                hasActiveCharacter={activeCharacters.length > 0}
+                onSelect={() => handleSelectCharacter(character)}
+                onActivate={() => setActivateDialog(character)}
+                onDelete={() => setDeleteDialog(character)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Create new character button */}
+      {(activeCharacters.length > 0 || experimentCharacters.length > 0) && (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleCreateCharacter}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          {t("player.characters.createNew")}
+        </Button>
       )}
 
       {/* Dead characters (graveyard) */}
@@ -399,30 +439,10 @@ function CharacterCard({ character, hasActiveCharacter, onSelect, onActivate, on
         {/* Actions */}
         <div className="mt-3 flex items-center justify-end gap-2">
           {isActive ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSelect}
-            >
-              Открыть лист
-            </Button>
-          ) : hasActiveCharacter ? (
-            // There's already an active character - just show delete if allowed
-            canDelete && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )
+            // Active character - no extra buttons needed, card click opens sheet
+            null
           ) : (
-            // No active character - show activate button
+            // Inactive character
             <>
               {canDelete && (
                 <Button
@@ -437,17 +457,21 @@ function CharacterCard({ character, hasActiveCharacter, onSelect, onActivate, on
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
-              <Button
-                variant="default"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onActivate();
-                }}
-              >
-                <Play className="mr-1 h-4 w-4" />
-                Активировать
-              </Button>
+
+              {/* Activate button - only show if no active character yet */}
+              {!hasActiveCharacter && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onActivate();
+                  }}
+                >
+                  <Play className="mr-1 h-4 w-4" />
+                  Активировать
+                </Button>
+              )}
             </>
           )}
         </div>

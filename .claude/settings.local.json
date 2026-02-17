@@ -39,7 +39,21 @@
       "Bash(docker-compose down:*)",
       "Bash(docker-compose up:*)",
       "Bash(docker-compose ps:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(cat:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(docker builder prune:*)",
+      "Bash(docker run:*)",
+      "Bash(npm install)",
+      "Bash(wmic process:*)",
+      "Bash(cmd //c \"taskkill /F /PID 7520\")",
+      "Bash(TOKEN=\"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIwMTljNjZmZS02NzljLTcwZTktOTE3ZS0xYmFlZmRjM2FhZWUiLCJqdGkiOiI4NWI0M2FlZjZkZWMxN2Y3Y2NjYjJlNDU0ODExMDk1YjEyYjlhYWI3ZmU4ODk4YzU0NGYxNDA4OGY4ZTU3MDQyYzk5YmY1NWNkZDA2MDM4ZSIsImlhdCI6MTc3MTMyMDE2Ni42ODA4MzgsIm5iZiI6MTc3MTMyMDE2Ni42ODA4NDIsImV4cCI6MTgwMjg1NjE2Ni42Njc5MTgsInN1YiI6IjEiLCJzY29wZXMiOltdfQ.gtXIoLEuthraP0vRzyC9-wBZgdpxKq1bQnSkvfTHvJs2sBajJhk2uKpEF8ouT_SELlkyvB2m5Xxpq-52jwvIiQxkEUHDGYalARsJ83Bp11DbZZxxCC2SbR1t7CprsnwfH2teGAg9W_o_WE-EiGBalxWpypTDCDsK65VZWt9JTbxlXBduSiOr85EYqm2tyZJyJNDv6H-uAjrDLpd1cyK5rdekTNnJgTFu7FAoVdvD5H4EKIMdWMBDAO7ML29Bx55wawhwI79O3XLL1Jy6KxmWMuJUjRBHe6WldG0tNmEWN7WLwINNblvPqPMSEHhi7HBZbmeQjXbt6xBCKW9B8bOXyKcMBP6FlYD2UifZHr7ry-xGUtXAYXj90AI1mcamiHQc94_gQJb6FAYzIwuhjy-YVmQB_QtrTE2IqwGNK0bplrcH0ZF-ZiKYMll2-smrpt0GJtCRQPWetvxxFmlk34NE7QlikLL_M6-UxrRLU1d1bxSvuVU1CWwt1BaMNIzGotnRzRfmikBht1EEO6ipoP1MazLAA4YjfQv92B5soMDbQAEYq3BHaU1IR5C8rERdYz8PNXNv7zqbUkj4dDWvUSjcSPraUcAR83qs4lE5zGxyKIKILOtHervIeJzqFnSNMSz87imCkUeb6i6wE805Yky2C-w30ZR-bOER51wFOsfgyvI\")",
+      "Bash(TOKEN=\"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIwMTljNjZmZS02NzljLTcwZTktOTE3ZS0xYmFlZmRjM2FhZWUiLCJqdGkiOiJlY2ZkOWY1NzUxMmY4OGJiMDY2OTRhNzFkMWYxNDJkNjNlMjA2ZDAyNjg5NTJiNzI4MjgxODk4ZmNlNjQ4YzQ3Mzg1ZmQzODcxOWFhOGExOCIsImlhdCI6MTc3MTMyMDg4Ny4xODgzNjEsIm5iZiI6MTc3MTMyMDg4Ny4xODgzNjMsImV4cCI6MTgwMjg1Njg4Ny4xODM0MTgsInN1YiI6IjEiLCJzY29wZXMiOlsiKiJdfQ.WDfKOGuVdVSZSMMFkgDLYyZYi8PbHIuVuozOFh42f8fvX1YXYgdYYwlvreLSu8JmLrzBWkAnSsWvrNRYD7kn0ddZyIdIutlSmoksuaB_D3lwCKldQ9mll63DFxor45YzVKa7lLg55Au2Gb1Ppsc1RitsoB0vvVyYK7YRvDi7k0-_26Ttj-jGiy1KEqur61YqcN6MX6aIrUiWv3lFlx57Ro1Fbyl8y6H-f2E7DqQ5FBelL0wjRIqFfyqgEqwd1ivu71OQ_Vdt5mw2JzuvI2Eq-X5EyXIPyTp1Kw-gVw5eSdTAod2gr9ypRkh3Q5gOL_wOjEHX5D-Ayj0s5d32Kf6JgXO8S2XDcr36S6YP-gEc2s60v6-AGouH_NmDI_UDiPhuKxhLAlUM411HHIk-vZyUgYxA6fEuYaHr1jRfnNIkd-LpW4eKCzix4q57wpEL9IQDZly4-TOjgaOBSvtLTmbb6YlZzlEvONzrttssKYrm7fThA8ovHz7oCOUVwQUbPXUDDqbd5y5KC-eRFoM6FgH2cUz5qkL5GtMI_8U1k7vog8pb0XuHcROHI8VO7F4u0w5N45eDauNde_lHk8InJFa-1-LQ0wYtI0VzSCir7_h-0sFzItBmktE38DlC-k-3B7jOyUPKSTI6QCg3hPJjdsrLke4XFcMRCg-6YbuRPBqLtDY\")",
+      "Bash(__NEW_LINE__ curl -s -X POST http://localhost:8000/broadcasting/auth -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/x-www-form-urlencoded\" -H \"Origin: http://localhost:3000\" -d \"channel_name=private-campaign.1&socket_id=123.456\")",
+      "Bash(__NEW_LINE__ curl -s -X POST \"http://localhost:8000/broadcasting/auth\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/x-www-form-urlencoded\" -H \"Origin: http://localhost:3000\" -d \"channel_name=presence-campaign.1&socket_id=123.456\")",
+      "Bash(__NEW_LINE__ curl -s -X POST \"http://localhost:8000/broadcasting/auth\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/x-www-form-urlencoded\" -d \"channel_name=presence-campaign.1&socket_id=123.456\")",
+      "Bash(cmd //c \"taskkill /F /IM node.exe 2>nul\")",
+      "Bash(git reset:*)"
     ]
   }
 }

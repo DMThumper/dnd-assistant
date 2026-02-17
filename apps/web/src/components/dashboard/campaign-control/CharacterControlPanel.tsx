@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import type { Character } from "@/types/game";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -30,13 +30,15 @@ interface CharacterControlPanelProps {
   character: Character;
   campaignId: number;
   onCharacterUpdate: (character: Character) => void;
+  onMarkPendingUpdate: (characterId: number, updateType?: "hp" | "xp" | "condition") => void;
   onBack: () => void;
 }
 
-export function CharacterControlPanel({
+export const CharacterControlPanel = memo(function CharacterControlPanel({
   character,
   campaignId,
   onCharacterUpdate,
+  onMarkPendingUpdate,
   onBack,
 }: CharacterControlPanelProps) {
   const [activeTab, setActiveTab] = useState("hp");
@@ -194,18 +196,21 @@ export function CharacterControlPanel({
               <HpControl
                 character={character}
                 onCharacterUpdate={onCharacterUpdate}
+                onMarkPendingUpdate={onMarkPendingUpdate}
               />
 
               {/* Conditions */}
               <ConditionsControl
                 character={character}
                 onCharacterUpdate={onCharacterUpdate}
+                onMarkPendingUpdate={onMarkPendingUpdate}
               />
 
               {/* Custom Rules */}
               <CustomRulesControl
                 character={character}
                 onCharacterUpdate={onCharacterUpdate}
+                onMarkPendingUpdate={onMarkPendingUpdate}
               />
 
               {/* Quick Actions */}
@@ -213,6 +218,7 @@ export function CharacterControlPanel({
                 character={character}
                 campaignId={campaignId}
                 onCharacterUpdate={onCharacterUpdate}
+                onMarkPendingUpdate={onMarkPendingUpdate}
               />
             </div>
           </ScrollArea>
@@ -236,10 +242,12 @@ export function CharacterControlPanel({
               <CurrencyView
                 character={character}
                 onCharacterUpdate={onCharacterUpdate}
+                onMarkPendingUpdate={onMarkPendingUpdate}
               />
               <InventoryView
                 character={character}
                 onCharacterUpdate={onCharacterUpdate}
+                onMarkPendingUpdate={onMarkPendingUpdate}
               />
             </div>
           </ScrollArea>
@@ -258,4 +266,4 @@ export function CharacterControlPanel({
       </Tabs>
     </div>
   );
-}
+});

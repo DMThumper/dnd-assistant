@@ -51,9 +51,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy entrypoint script
+# Copy entrypoint script and fix Windows line endings
 COPY docker/entrypoint.dev.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Expose port
 EXPOSE 8000

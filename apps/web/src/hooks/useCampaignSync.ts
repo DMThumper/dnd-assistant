@@ -5,11 +5,11 @@ import type { Channel, PresenceChannel } from "laravel-echo";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import type { Character, LiveSession } from "@/types/game";
 
-// Presence member type
+// Presence member type (matches channels.php return format)
 interface PresenceMember {
   id: number;
   name: string;
-  email?: string;
+  role: "dm" | "player";
 }
 
 // Event payload types (same as useCharacterSync but for campaign-wide events)

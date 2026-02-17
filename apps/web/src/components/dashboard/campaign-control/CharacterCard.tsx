@@ -9,9 +9,10 @@ interface CharacterCardProps {
   character: Character;
   isSelected: boolean;
   onSelect: () => void;
+  variant?: "default" | "inactive";
 }
 
-export function CharacterCard({ character, isSelected, onSelect }: CharacterCardProps) {
+export function CharacterCard({ character, isSelected, onSelect, variant = "default" }: CharacterCardProps) {
   // Calculate HP percentage
   const hpPercentage = Math.round((character.current_hp / character.max_hp) * 100);
   const totalHp = character.current_hp + character.temp_hp;
@@ -67,6 +68,8 @@ export function CharacterCard({ character, isSelected, onSelect }: CharacterCard
   const hasConditions = character.conditions && character.conditions.length > 0;
   const hasCustomRules = character.custom_rules && character.custom_rules.length > 0;
 
+  const isInactive = variant === "inactive";
+
   return (
     <button
       onClick={onSelect}
@@ -76,7 +79,9 @@ export function CharacterCard({ character, isSelected, onSelect }: CharacterCard
         "min-h-[80px]", // Touch-friendly minimum height
         isSelected
           ? "bg-zinc-800 border-primary/50 ring-1 ring-primary/30"
-          : "bg-zinc-900 border-zinc-800 hover:bg-zinc-800/80 hover:border-zinc-700"
+          : isInactive
+            ? "bg-purple-900/20 border-purple-500/30 hover:bg-purple-900/30 hover:border-purple-500/40"
+            : "bg-zinc-900 border-zinc-800 hover:bg-zinc-800/80 hover:border-zinc-700"
       )}
     >
       <div className="flex items-start gap-3">

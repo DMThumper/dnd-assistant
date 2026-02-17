@@ -22,6 +22,34 @@ class CharacterController extends Controller
     ) {}
 
     /**
+     * Check if character modification is allowed.
+     *
+     * Rules:
+     * - Inactive characters (is_active=false) can always be modified (experimentation mode)
+     * - Active characters (is_active=true) require an active live session
+     *
+     * @return JsonResponse|null Returns error response if not allowed, null if allowed
+     */
+    private function checkModificationAllowed(Character $character): ?JsonResponse
+    {
+        // Inactive characters can always be modified (experimentation mode)
+        if (!$character->is_active) {
+            return null;
+        }
+
+        // Active characters require an active live session
+        $campaign = $character->campaign;
+        if (!$campaign->hasActiveLiveSession()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Изменения активных персонажей возможны только во время активной сессии. Вне сессии можно экспериментировать с неактивными персонажами.',
+            ], 422);
+        }
+
+        return null;
+    }
+
+    /**
      * Get characters for a campaign
      */
     public function index(Request $request, Campaign $campaign): JsonResponse
@@ -92,6 +120,11 @@ class CharacterController extends Controller
                 'success' => false,
                 'message' => 'Это не ваш персонаж',
             ], 403);
+        }
+
+        // Check if modification is allowed (active characters need active session)
+        if ($errorResponse = $this->checkModificationAllowed($character)) {
+            return $errorResponse;
         }
 
         $validated = $request->validate([
@@ -580,6 +613,11 @@ class CharacterController extends Controller
                 'success' => false,
                 'message' => 'Это не ваш персонаж',
             ], 403);
+        }
+
+        // Check if modification is allowed (active characters need active session)
+        if ($errorResponse = $this->checkModificationAllowed($character)) {
+            return $errorResponse;
         }
 
         $validated = $request->validate([

@@ -17,6 +17,34 @@ class CharacterController extends Controller
     ) {}
 
     /**
+     * Check if character modification is allowed.
+     *
+     * Rules:
+     * - Inactive characters (is_active=false) can always be modified (experimentation mode)
+     * - Active characters (is_active=true) require an active live session
+     *
+     * @return JsonResponse|null Returns error response if not allowed, null if allowed
+     */
+    private function checkModificationAllowed(Character $character): ?JsonResponse
+    {
+        // Inactive characters can always be modified (experimentation mode)
+        if (!$character->is_active) {
+            return null;
+        }
+
+        // Active characters require an active live session
+        $campaign = $character->campaign;
+        if (!$campaign->hasActiveLiveSession()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Изменения активных персонажей возможны только во время активной сессии. Деактивируйте персонажа для экспериментов.',
+            ], 422);
+        }
+
+        return null;
+    }
+
+    /**
      * List all characters in a campaign
      */
     public function index(Request $request, Campaign $campaign): JsonResponse
@@ -220,6 +248,11 @@ class CharacterController extends Controller
             ], 403);
         }
 
+        // Check if modification is allowed (active characters need active session)
+        if ($errorResponse = $this->checkModificationAllowed($character)) {
+            return $errorResponse;
+        }
+
         $validated = $request->validate([
             'amount' => 'required|integer|min:0',
             'type' => 'required|string|in:damage,healing,temp_hp,set',
@@ -267,8 +300,17 @@ class CharacterController extends Controller
             'all_active' => 'sometimes|boolean',
         ]);
 
+        $hasActiveSession = $campaign->hasActiveLiveSession();
+
         // Determine which characters to award XP to
         if ($request->boolean('all_active')) {
+            // all_active only works during active sessions
+            if (!$hasActiveSession) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Выдача опыта всем активным персонажам возможна только во время активной сессии',
+                ], 422);
+            }
             $characters = $campaign->characters()
                 ->where('is_alive', true)
                 ->where('is_active', true)
@@ -278,6 +320,16 @@ class CharacterController extends Controller
                 ->whereIn('id', $validated['character_ids'])
                 ->where('is_alive', true)
                 ->get();
+
+            // Filter: active characters need active session, inactive can always receive XP
+            $characters = $characters->filter(function ($character) use ($hasActiveSession) {
+                // Inactive characters can always receive XP (experimentation mode)
+                if (!$character->is_active) {
+                    return true;
+                }
+                // Active characters need active session
+                return $hasActiveSession;
+            });
         } else {
             return response()->json([
                 'success' => false,
@@ -288,7 +340,7 @@ class CharacterController extends Controller
         if ($characters->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Нет подходящих персонажей для получения опыта',
+                'message' => 'Нет подходящих персонажей для получения опыта. Активным персонажам нужна активная сессия.',
             ], 422);
         }
 
@@ -332,6 +384,11 @@ class CharacterController extends Controller
                 'success' => false,
                 'message' => 'Только Мастер может изменять состояния персонажа',
             ], 403);
+        }
+
+        // Check if modification is allowed (active characters need active session)
+        if ($errorResponse = $this->checkModificationAllowed($character)) {
+            return $errorResponse;
         }
 
         $validated = $request->validate([
@@ -378,6 +435,11 @@ class CharacterController extends Controller
                 'success' => false,
                 'message' => 'Только Мастер может управлять кастомными правилами',
             ], 403);
+        }
+
+        // Check if modification is allowed (active characters need active session)
+        if ($errorResponse = $this->checkModificationAllowed($character)) {
+            return $errorResponse;
         }
 
         $validated = $request->validate([
@@ -463,6 +525,11 @@ class CharacterController extends Controller
             ], 403);
         }
 
+        // Check if modification is allowed (active characters need active session)
+        if ($errorResponse = $this->checkModificationAllowed($character)) {
+            return $errorResponse;
+        }
+
         $validated = $request->validate([
             'item_slug' => 'sometimes|string|max:100',
             'name' => 'required_without:item_slug|string|max:200',
@@ -512,6 +579,11 @@ class CharacterController extends Controller
             ], 403);
         }
 
+        // Check if modification is allowed (active characters need active session)
+        if ($errorResponse = $this->checkModificationAllowed($character)) {
+            return $errorResponse;
+        }
+
         $validated = $request->validate([
             'type' => 'required|string|in:cp,sp,ep,gp,pp',
             'amount' => 'required|integer',
@@ -549,6 +621,11 @@ class CharacterController extends Controller
                 'success' => false,
                 'message' => 'Только Мастер может изменять вдохновение',
             ], 403);
+        }
+
+        // Check if modification is allowed (active characters need active session)
+        if ($errorResponse = $this->checkModificationAllowed($character)) {
+            return $errorResponse;
         }
 
         $character = $this->characterService->toggleInspiration($character);

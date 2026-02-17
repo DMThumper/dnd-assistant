@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import type { Character } from "@/types/game";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -29,9 +29,10 @@ import { toast } from "sonner";
 interface HpControlProps {
   character: Character;
   onCharacterUpdate: (character: Character) => void;
+  onMarkPendingUpdate: (characterId: number, updateType?: "hp" | "xp" | "condition") => void;
 }
 
-export function HpControl({ character, onCharacterUpdate }: HpControlProps) {
+export const HpControl = memo(function HpControl({ character, onCharacterUpdate, onMarkPendingUpdate }: HpControlProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [damageModalOpen, setDamageModalOpen] = useState(false);
   const [healModalOpen, setHealModalOpen] = useState(false);
@@ -54,6 +55,9 @@ export function HpControl({ character, onCharacterUpdate }: HpControlProps) {
   // API call for HP modification
   const modifyHp = async (amount: number, type: "damage" | "healing" | "temp_hp" | "set") => {
     if (amount === 0) return;
+
+    // Mark as pending BEFORE API call to prevent WebSocket echo
+    onMarkPendingUpdate(character.id, "hp");
 
     setIsLoading(true);
     try {
@@ -344,4 +348,13 @@ export function HpControl({ character, onCharacterUpdate }: HpControlProps) {
       </Dialog>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison - only re-render if HP-related fields change
+  return (
+    prevProps.character.id === nextProps.character.id &&
+    prevProps.character.current_hp === nextProps.character.current_hp &&
+    prevProps.character.max_hp === nextProps.character.max_hp &&
+    prevProps.character.temp_hp === nextProps.character.temp_hp &&
+    prevProps.character.name === nextProps.character.name
+  );
+});

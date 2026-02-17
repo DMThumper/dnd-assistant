@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import type { Character, CustomRule, CustomRuleEffect } from "@/types/game";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -41,12 +41,13 @@ import { toast } from "sonner";
 interface CustomRulesControlProps {
   character: Character;
   onCharacterUpdate: (character: Character) => void;
+  onMarkPendingUpdate: (characterId: number, updateType?: "hp" | "xp" | "condition") => void;
 }
 
 // Generate unique ID
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
-export function CustomRulesControl({ character, onCharacterUpdate }: CustomRulesControlProps) {
+export const CustomRulesControl = memo(function CustomRulesControl({ character, onCharacterUpdate, onMarkPendingUpdate }: CustomRulesControlProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<CustomRule | null>(null);
@@ -109,6 +110,9 @@ export function CustomRulesControl({ character, onCharacterUpdate }: CustomRules
       return;
     }
 
+    // Mark as pending BEFORE API call
+    onMarkPendingUpdate(character.id);
+
     setIsLoading(true);
     try {
       const rule: CustomRule = {
@@ -140,6 +144,9 @@ export function CustomRulesControl({ character, onCharacterUpdate }: CustomRules
   // Delete rule
   const handleDeleteRule = async () => {
     if (!deleteConfirmRule) return;
+
+    // Mark as pending BEFORE API call
+    onMarkPendingUpdate(character.id);
 
     setIsLoading(true);
     try {
@@ -441,4 +448,14 @@ export function CustomRulesControl({ character, onCharacterUpdate }: CustomRules
       </AlertDialog>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison - only re-render if custom_rules change
+  const prevRules = prevProps.character.custom_rules || [];
+  const nextRules = nextProps.character.custom_rules || [];
+
+  return (
+    prevProps.character.id === nextProps.character.id &&
+    prevProps.character.name === nextProps.character.name &&
+    JSON.stringify(prevRules) === JSON.stringify(nextRules)
+  );
+});

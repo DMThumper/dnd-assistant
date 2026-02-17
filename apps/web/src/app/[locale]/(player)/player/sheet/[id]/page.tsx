@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api, ApiClientError } from "@/lib/api";
-import type { Character, Condition, LiveSession } from "@/types/game";
+import type { Character, Condition } from "@/types/game";
 import { cn, formatModifier, calculateModifier } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,13 +23,9 @@ import {
   Star,
   TrendingUp,
   RefreshCw,
-  Wifi,
-  WifiOff,
-  Radio,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useCharacterSync } from "@/hooks/useCharacterSync";
-import { useCampaignSync } from "@/hooks/useCampaignSync";
+import { usePlayerSession } from "@/contexts/PlayerSessionContext";
 import { toast } from "sonner";
 
 // XP thresholds for D&D 5e levels
@@ -66,7 +62,7 @@ const ABILITIES = [
   "charisma",
 ] as const;
 
-const ACTIVE_CHARACTER_KEY = "dnd-player-active-character";
+// Active character is now managed by PlayerSessionContext
 
 type AbilityKey = (typeof ABILITIES)[number];
 
@@ -76,110 +72,31 @@ export default function CharacterSheetPage() {
   const params = useParams();
   const characterId = Number(params.id);
 
-  const [character, setCharacter] = useState<Character | null>(null);
+  // Get session context - handles WebSocket subscriptions
+  const {
+    character: contextCharacter,
+    setActiveCharacter,
+    updateCharacter,
+    liveSession,
+  } = usePlayerSession();
+
+  const [localCharacter, setLocalCharacter] = useState<Character | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
 
-  // Real-time sync with DM via WebSocket
-  const { isConnected } = useCharacterSync(character ? characterId : null, {
-    onCharacterUpdated: (payload) => {
-      // Update character with DM's changes
-      setCharacter(payload.character);
-      if (payload.update_type === "hp") {
-        const changes = payload.changes as { type?: string; amount?: number };
-        if (changes.type === "damage") {
-          toast.error(`Получено ${changes.amount} урона`);
-        } else if (changes.type === "healing") {
-          toast.success(`Исцелено ${changes.amount} HP`);
-        }
-      }
-    },
-    onXPAwarded: (payload) => {
-      setCharacter((prev) =>
-        prev ? { ...prev, experience_points: payload.total_xp } : null
-      );
-      toast.success(`+${payload.xp_amount} XP${payload.reason ? `: ${payload.reason}` : ""}`, {
-        duration: 5000,
-      });
-      if (payload.can_level_up) {
-        toast.info("Доступно повышение уровня!", {
-          duration: 10000,
-          icon: "🎉",
-        });
-      }
-    },
-    onConditionChanged: (payload) => {
-      setCharacter((prev) =>
-        prev ? { ...prev, conditions: payload.all_conditions as Condition[] } : null
-      );
-      const action = payload.action === "added" ? "Добавлено" : "Убрано";
-      const conditionName = payload.condition.name || payload.condition.key;
-      if (payload.action === "added") {
-        toast.warning(`${action}: ${conditionName}`);
-      } else {
-        toast.info(`${action}: ${conditionName}`);
-      }
-    },
-    onLevelUp: (payload) => {
-      setCharacter(payload.character);
-      toast.success(`Уровень повышен до ${payload.new_level}!`, {
-        duration: 10000,
-        icon: "🎉",
-      });
-    },
-    onCustomRuleChanged: (payload) => {
-      // Refresh character to get updated custom rules
-      void fetchCharacterSilent();
-      const action = payload.action === "added" ? "Добавлен" : payload.action === "removed" ? "Убран" : "Изменён";
-      toast.info(`${action} эффект: ${payload.custom_rule.name}`);
-    },
-  });
-
-  // Listen for live session events from campaign channel
-  useCampaignSync(character?.campaign_id || null, {
-    onLiveSessionStarted: (payload) => {
-      setLiveSession(payload.live_session);
-      toast.success("DM запустил сессию!", {
-        duration: 5000,
-        icon: "🎲",
-      });
-    },
-    onLiveSessionEnded: (payload) => {
-      setLiveSession(null);
-      toast.info("Сессия завершена", {
-        duration: 5000,
-      });
-    },
-  });
-
-  // Silent fetch without loading state (for WebSocket-triggered refreshes)
-  const fetchCharacterSilent = useCallback(async () => {
-    try {
-      const response = await api.getCharacter(characterId);
-      setCharacter(response.data.character);
-    } catch (err) {
-      console.error("Failed to refresh character:", err);
-    }
-  }, [characterId]);
+  // Use context character if available, otherwise use local state
+  const character = contextCharacter || localCharacter;
+  const setCharacter = contextCharacter ? updateCharacter : setLocalCharacter;
 
   const fetchCharacter = useCallback(async () => {
     try {
       const response = await api.getCharacter(characterId);
-      setCharacter(response.data.character);
-      // Save active character ID for spells/inventory pages
-      localStorage.setItem(ACTIVE_CHARACTER_KEY, String(characterId));
+      const fetchedCharacter = response.data.character;
+      setLocalCharacter(fetchedCharacter);
 
-      // Fetch live session status for the campaign
-      try {
-        const sessionResponse = await api.getPlayerLiveSessionStatus(response.data.character.campaign_id);
-        if (sessionResponse.data.has_active_session) {
-          setLiveSession(sessionResponse.data.live_session);
-        }
-      } catch (sessionErr) {
-        console.warn("Failed to fetch live session status:", sessionErr);
-      }
+      // Set active character in context - this triggers WebSocket subscriptions
+      setActiveCharacter(characterId, fetchedCharacter.campaign_id);
     } catch (err) {
       if (err instanceof ApiClientError) {
         setError(err.message);
@@ -189,7 +106,7 @@ export default function CharacterSheetPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [characterId, t]);
+  }, [characterId, t, setActiveCharacter]);
 
   useEffect(() => {
     void fetchCharacter();
@@ -257,14 +174,15 @@ export default function CharacterSheetPage() {
         : "bg-success";
 
   // XP calculations
-  const currentLevel = character.level;
+  const currentLevel = character.level ?? 1;
+  const currentXp = character.experience_points ?? 0;
   const nextLevel = currentLevel + 1;
   const currentLevelXp = XP_THRESHOLDS[currentLevel] || 0;
   const nextLevelXp = XP_THRESHOLDS[nextLevel] || XP_THRESHOLDS[20];
-  const xpInCurrentLevel = character.experience_points - currentLevelXp;
+  const xpInCurrentLevel = currentXp - currentLevelXp;
   const xpNeededForNextLevel = nextLevelXp - currentLevelXp;
   const xpProgress = currentLevel >= 20 ? 100 : (xpInCurrentLevel / xpNeededForNextLevel) * 100;
-  const canLevelUp = character.experience_points >= nextLevelXp && currentLevel < 20;
+  const canLevelUp = currentXp >= nextLevelXp && currentLevel < 20;
 
   return (
     <div className="p-4 space-y-4 pb-20">
@@ -280,24 +198,7 @@ export default function CharacterSheetPage() {
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold">{character.name}</h1>
-            {liveSession ? (
-              <Badge
-                variant="outline"
-                className="bg-green-500/10 border-green-500/30 text-green-400 text-xs animate-pulse"
-                title="Сессия активна"
-              >
-                <Radio className="mr-1 h-3 w-3" />
-                Live
-              </Badge>
-            ) : (
-              <span title={isConnected ? "Подключено к серверу" : "Нет подключения"}>
-                {isConnected ? (
-                  <Wifi className="h-4 w-4 text-green-500" />
-                ) : (
-                  <WifiOff className="h-4 w-4 text-muted-foreground" />
-                )}
-              </span>
-            )}
+            {/* Connection status is shown in layout header */}
           </div>
           <p className="text-sm text-muted-foreground">
             {character.race_slug && (
@@ -342,7 +243,7 @@ export default function CharacterSheetPage() {
                 <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
               </Button>
               <span className="text-xl font-bold text-yellow-500">
-                {character.experience_points.toLocaleString()}
+                {(character.experience_points ?? 0).toLocaleString()}
               </span>
             </div>
           </div>
@@ -354,13 +255,19 @@ export default function CharacterSheetPage() {
                 <span>{xpInCurrentLevel.toLocaleString()} / {xpNeededForNextLevel.toLocaleString()}</span>
               </div>
               <Progress value={xpProgress} className="h-3" />
-              {canLevelUp && (
+              {/* Show Level Up button if: has enough XP OR inactive character */}
+              {(canLevelUp || !character.is_active) && (
                 <Button
                   onClick={() => router.push(`/player/sheet/${characterId}/level-up`)}
-                  className="mt-2 w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold animate-pulse"
+                  className={cn(
+                    "mt-2 w-full font-bold",
+                    canLevelUp
+                      ? "bg-yellow-500 hover:bg-yellow-600 text-black animate-pulse"
+                      : "bg-yellow-600 hover:bg-yellow-500 text-black"
+                  )}
                 >
                   <TrendingUp className="mr-2 h-5 w-5" />
-                  Повысить уровень!
+                  Повысить уровень
                 </Button>
               )}
             </>
@@ -383,7 +290,7 @@ export default function CharacterSheetPage() {
             <div className="text-2xl font-bold">
               {character.current_hp}
               <span className="text-muted-foreground text-lg">/{character.max_hp}</span>
-              {character.temp_hp > 0 && (
+              {(character.temp_hp ?? 0) > 0 && (
                 <span className="text-info text-lg ml-1">+{character.temp_hp}</span>
               )}
             </div>
@@ -508,7 +415,7 @@ export default function CharacterSheetPage() {
               <Shield className="h-4 w-4" />
               <span>{t("player.sheet.ac")}</span>
             </div>
-            <div className="text-2xl font-bold">{character.armor_class}</div>
+            <div className="text-2xl font-bold">{character.armor_class ?? 10}</div>
           </CardContent>
         </Card>
 
@@ -519,7 +426,7 @@ export default function CharacterSheetPage() {
               <span>{t("player.sheet.proficiencyBonus")}</span>
             </div>
             <div className="text-2xl font-bold">
-              {formatModifier(character.proficiency_bonus)}
+              {formatModifier(character.proficiency_bonus ?? 2)}
             </div>
           </CardContent>
         </Card>
@@ -531,7 +438,7 @@ export default function CharacterSheetPage() {
               <span>{t("player.sheet.speed")}</span>
             </div>
             <div className="text-2xl font-bold">
-              {character.speed.walk}
+              {character.speed?.walk ?? 9}
               <span className="text-sm text-muted-foreground">м</span>
             </div>
           </CardContent>
@@ -546,10 +453,11 @@ export default function CharacterSheetPage() {
         <CardContent>
           <div className="grid grid-cols-3 gap-2">
             {ABILITIES.map((ability) => {
-              const score = character.abilities[ability];
+              const abilities = character.abilities ?? {};
+              const score = abilities[ability] ?? 10;
               const modifier = calculateModifier(score);
               const hasSaveProficiency =
-                character.saving_throw_proficiencies.includes(ability);
+                (character.saving_throw_proficiencies ?? []).includes(ability);
 
               return (
                 <div
@@ -584,13 +492,13 @@ export default function CharacterSheetPage() {
       </Card>
 
       {/* Features Section */}
-      {character.features.length > 0 && (
+      {(character.features ?? []).length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t("player.sheet.features")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {character.features.map((feature, index) => (
+            {(character.features ?? []).map((feature, index) => (
               <div key={index} className="text-sm">
                 <span className="font-medium">{feature.name}</span>
                 <span className="text-muted-foreground"> — {feature.description}</span>
@@ -601,13 +509,13 @@ export default function CharacterSheetPage() {
       )}
 
       {/* Class Resources */}
-      {character.class_resources.length > 0 && (
+      {(character.class_resources ?? []).length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Ресурсы класса</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {character.class_resources.map((resource, index) => (
+            {(character.class_resources ?? []).map((resource, index) => (
               <div key={index} className="flex items-center justify-between">
                 <div>
                   <span className="font-medium">{resource.name}</span>
@@ -665,16 +573,20 @@ const SKILLS: Array<{ key: string; ability: AbilityKey }> = [
 
 function SkillsList({ character }: SkillsListProps) {
   const t = useTranslations();
+  const abilities = character.abilities ?? {};
+  const skillProficiencies = character.skill_proficiencies ?? [];
+  const skillExpertise = character.skill_expertise ?? [];
+  const proficiencyBonus = character.proficiency_bonus ?? 2;
 
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
       {SKILLS.map((skill) => {
-        const hasProficiency = character.skill_proficiencies.includes(skill.key);
-        const hasExpertise = character.skill_expertise.includes(skill.key);
-        const abilityMod = calculateModifier(character.abilities[skill.ability]);
+        const hasProficiency = skillProficiencies.includes(skill.key);
+        const hasExpertise = skillExpertise.includes(skill.key);
+        const abilityMod = calculateModifier(abilities[skill.ability] ?? 10);
         let totalMod = abilityMod;
-        if (hasProficiency) totalMod += character.proficiency_bonus;
-        if (hasExpertise) totalMod += character.proficiency_bonus;
+        if (hasProficiency) totalMod += proficiencyBonus;
+        if (hasExpertise) totalMod += proficiencyBonus;
 
         return (
           <div key={skill.key} className="flex items-center justify-between py-1">

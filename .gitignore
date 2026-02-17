@@ -56,3 +56,6 @@ coverage/
 # Misc
 *.log
 *.cache
+
+# Claude Code temp files
+tmpclaude-*

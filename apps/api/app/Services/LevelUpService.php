@@ -12,6 +12,7 @@ class LevelUpService
 {
     /**
      * Check if character can level up based on XP
+     * Inactive characters can always level up (for experimentation)
      */
     public function canLevelUp(Character $character): array
     {
@@ -33,8 +34,22 @@ class LevelUpService
             ];
         }
 
-        $canLevel = $ruleSystem->canLevelUp($character->level, $character->experience_points);
         $nextLevelXp = $ruleSystem->getXpForLevel($character->level + 1);
+
+        // Inactive characters can always level up (for experimentation/preparation)
+        if (!$character->is_active) {
+            return [
+                'can_level_up' => true,
+                'current_level' => $character->level,
+                'current_xp' => $character->experience_points,
+                'next_level' => $character->level + 1,
+                'xp_required' => $nextLevelXp,
+                'xp_remaining' => 0,
+                'inactive_mode' => true,
+            ];
+        }
+
+        $canLevel = $ruleSystem->canLevelUp($character->level, $character->experience_points);
 
         return [
             'can_level_up' => $canLevel,
@@ -95,12 +110,23 @@ class LevelUpService
 
     /**
      * Process level up with player choices
+     * Inactive characters get XP auto-granted to reach the next level
      */
     public function processLevelUp(Character $character, array $choices): Character
     {
         $ruleSystem = $this->getRuleSystem($character);
-        if (!$ruleSystem || !$ruleSystem->canLevelUp($character->level, $character->experience_points)) {
-            throw new \Exception('Персонаж не может повысить уровень');
+        if (!$ruleSystem) {
+            throw new \Exception('Система правил не найдена');
+        }
+
+        // For inactive characters, auto-grant XP to reach next level
+        if (!$character->is_active) {
+            $nextLevelXp = $ruleSystem->getXpForLevel($character->level + 1);
+            if ($character->experience_points < $nextLevelXp) {
+                $character->experience_points = $nextLevelXp;
+            }
+        } elseif (!$ruleSystem->canLevelUp($character->level, $character->experience_points)) {
+            throw new \Exception('Недостаточно опыта для повышения уровня');
         }
 
         $previousLevel = $character->level;

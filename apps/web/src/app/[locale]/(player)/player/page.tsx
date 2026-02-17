@@ -1,27 +1,112 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api, ApiClientError } from "@/lib/api";
-import type { PlayerCampaign } from "@/types/game";
+import { getEcho } from "@/lib/echo";
+import { usePlayerSession } from "@/contexts/PlayerSessionContext";
+import type { PlayerCampaign, LiveSession } from "@/types/game";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, Swords, Calendar } from "lucide-react";
+import { Loader2, Users, Swords, Radio, WifiOff } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import type { Channel } from "laravel-echo";
+
+interface LiveSessionStartedPayload {
+  live_session: LiveSession;
+  campaign_id: number;
+}
+
+interface LiveSessionEndedPayload {
+  campaign_id: number;
+}
 
 export default function PlayerCampaignsPage() {
   const t = useTranslations();
   const router = useRouter();
+  const { clearActiveCharacter } = usePlayerSession();
   const [campaigns, setCampaigns] = useState<PlayerCampaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Track subscribed channels for cleanup
+  const channelsRef = useRef<Map<number, Channel>>(new Map());
+
+  // Clear active character when on campaigns page
+  // This ensures we don't show as "online" in presence channel from a previous session
+  useEffect(() => {
+    clearActiveCharacter();
+  }, [clearActiveCharacter]);
+
+  // Handle session started event
+  const handleSessionStarted = useCallback((payload: LiveSessionStartedPayload) => {
+    console.log("[WS] Campaign session started:", payload.campaign_id);
+    setCampaigns(prev =>
+      prev.map(c =>
+        c.id === payload.campaign_id
+          ? { ...c, has_active_live_session: true, live_session: payload.live_session }
+          : c
+      )
+    );
+  }, []);
+
+  // Handle session ended event
+  const handleSessionEnded = useCallback((payload: LiveSessionEndedPayload) => {
+    console.log("[WS] Campaign session ended:", payload.campaign_id);
+    setCampaigns(prev =>
+      prev.map(c =>
+        c.id === payload.campaign_id
+          ? { ...c, has_active_live_session: false, live_session: null }
+          : c
+      )
+    );
+  }, []);
+
+  // Subscribe to campaign channels (private, not presence - we don't want to show as "online" here)
+  useEffect(() => {
+    if (campaigns.length === 0) return;
+
+    const echo = getEcho();
+    if (!echo) {
+      console.warn("[WS] Echo not initialized, skipping campaign subscriptions");
+      return;
+    }
+
+    // Subscribe to each campaign's PRIVATE channel for session events
+    // Using private channel instead of presence so we don't show as "online" on campaign selection page
+    campaigns.forEach(campaign => {
+      // Skip if already subscribed
+      if (channelsRef.current.has(campaign.id)) return;
+
+      const channelName = `campaign.${campaign.id}`;
+      console.log("[WS] Subscribing to campaign private channel:", channelName);
+
+      const channel = echo.private(channelName)
+        .listen(".live_session.started", handleSessionStarted)
+        .listen(".live_session.ended", handleSessionEnded);
+
+      channelsRef.current.set(campaign.id, channel);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      channelsRef.current.forEach((channel, campaignId) => {
+        console.log("[WS] Leaving campaign private channel:", campaignId);
+        const echo = getEcho();
+        if (echo) {
+          echo.leave(`private-campaign.${campaignId}`);
+        }
+      });
+      channelsRef.current.clear();
+    };
+  }, [campaigns.length, handleSessionStarted, handleSessionEnded]);
+
+  // Fetch campaigns
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
         const response = await api.getPlayerCampaigns();
         setCampaigns(response.data.campaigns);
-        // Always show campaign list - don't auto-redirect
-        // Players may want to see all campaigns or create characters
       } catch (err) {
         if (err instanceof ApiClientError) {
           setError(err.message);
@@ -34,7 +119,7 @@ export default function PlayerCampaignsPage() {
     };
 
     void fetchCampaigns();
-  }, [router, t]);
+  }, [t]);
 
   if (isLoading) {
     return (
@@ -100,7 +185,26 @@ function CampaignCard({ campaign, onClick }: CampaignCardProps) {
       onClick={onClick}
     >
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">{campaign.name}</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-lg">{campaign.name}</CardTitle>
+          {campaign.has_active_live_session ? (
+            <Badge
+              variant="outline"
+              className="bg-green-500/10 border-green-500/30 text-green-400 text-xs animate-pulse"
+            >
+              <Radio className="mr-1 h-3 w-3" />
+              Live
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="bg-zinc-500/10 border-zinc-500/30 text-zinc-400 text-xs"
+            >
+              <WifiOff className="mr-1 h-3 w-3" />
+              Offline
+            </Badge>
+          )}
+        </div>
         {campaign.setting && (
           <p className="text-sm text-muted-foreground">{campaign.setting.name}</p>
         )}

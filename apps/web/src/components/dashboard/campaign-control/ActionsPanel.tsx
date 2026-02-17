@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import type { Character, InventoryItem, Currency } from "@/types/game";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -47,9 +47,10 @@ interface ActionsPanelProps {
   character: Character;
   campaignId: number;
   onCharacterUpdate: (character: Character) => void;
+  onMarkPendingUpdate: (characterId: number, updateType?: "hp" | "xp" | "condition") => void;
 }
 
-export function ActionsPanel({ character, campaignId, onCharacterUpdate }: ActionsPanelProps) {
+export const ActionsPanel = memo(function ActionsPanel({ character, campaignId, onCharacterUpdate, onMarkPendingUpdate }: ActionsPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [xpModalOpen, setXpModalOpen] = useState(false);
   const [itemModalOpen, setItemModalOpen] = useState(false);
@@ -93,6 +94,9 @@ export function ActionsPanel({ character, campaignId, onCharacterUpdate }: Actio
       toast.error("Введите корректное количество XP");
       return;
     }
+
+    // Mark as pending BEFORE API call
+    onMarkPendingUpdate(character.id, "xp");
 
     setIsLoading(true);
     try {
@@ -523,4 +527,14 @@ export function ActionsPanel({ character, campaignId, onCharacterUpdate }: Actio
       </AlertDialog>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison - only re-render if relevant fields change
+  return (
+    prevProps.character.id === nextProps.character.id &&
+    prevProps.character.name === nextProps.character.name &&
+    prevProps.character.inspiration === nextProps.character.inspiration &&
+    prevProps.character.experience_points === nextProps.character.experience_points &&
+    prevProps.campaignId === nextProps.campaignId &&
+    JSON.stringify(prevProps.character.currency) === JSON.stringify(nextProps.character.currency)
+  );
+});

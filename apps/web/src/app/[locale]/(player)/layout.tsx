@@ -6,10 +6,11 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
+import { PlayerSessionProvider, usePlayerSession } from "@/contexts/PlayerSessionContext";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 import { cn } from "@/lib/utils";
-import { Loader2, Swords, BookOpen, Backpack, LogOut } from "lucide-react";
-
-const ACTIVE_CHARACTER_KEY = "dnd-player-active-character";
+import { Loader2, Swords, BookOpen, Backpack, LogOut, Radio, WifiOff, Wifi } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,18 +28,14 @@ interface NavItem {
   match?: RegExp;
 }
 
-export default function PlayerLayout({ children }: { children: ReactNode }) {
+// Inner layout component that uses the session context
+function PlayerLayoutInner({ children }: { children: ReactNode }) {
   const { user, isAuthenticated, isLoading, logout, hasBackofficeAccess } = useAuth();
+  const { activeCharacterId, activeCampaignId, isValidating, isConnected, liveSession, character, clearActiveCharacter } = usePlayerSession();
+  const { hasAuthError } = useWebSocket();
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations();
-  const [activeCharacterId, setActiveCharacterId] = useState<string | null>(null);
-
-  // Get active character ID from localStorage
-  useEffect(() => {
-    const charId = localStorage.getItem(ACTIVE_CHARACTER_KEY);
-    setActiveCharacterId(charId);
-  }, [pathname]); // Re-check when pathname changes
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -60,6 +57,7 @@ export default function PlayerLayout({ children }: { children: ReactNode }) {
 
   // Build nav items with dynamic character ID
   const sheetHref = activeCharacterId ? `/player/sheet/${activeCharacterId}` : "/player/sheet";
+  const charIdStr = activeCharacterId ? String(activeCharacterId) : null;
 
   const navItems: NavItem[] = [
     {
@@ -110,10 +108,74 @@ export default function PlayerLayout({ children }: { children: ReactNode }) {
       {/* Top Header - Always visible */}
       <header className="sticky top-0 z-40 border-b border-border bg-card">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
-          <Link href="/player" className="flex items-center gap-2">
-            <span className="text-lg font-bold text-primary">D&D</span>
-            <span className="text-sm text-muted-foreground">Assistant</span>
-          </Link>
+          {/* Left side: Logo + Session Status */}
+          <div className="flex items-center gap-3">
+            <Link href="/player" className="flex items-center gap-2">
+              <span className="text-lg font-bold text-primary">D&D</span>
+              <span className="text-sm text-muted-foreground">Assistant</span>
+            </Link>
+
+            {/* Connection Status Indicator - only show after validation */}
+            {!isValidating && (
+              <>
+                {/* Priority 1: Offline - auth error takes precedence */}
+                {hasAuthError ? (
+                  <Badge
+                    variant="outline"
+                    className="bg-red-500/10 border-red-500/30 text-red-400 text-xs cursor-pointer hover:bg-red-500/20"
+                    title="Ошибка авторизации. Нажмите чтобы сбросить сессию"
+                    onClick={() => {
+                      clearActiveCharacter();
+                      window.location.reload();
+                    }}
+                  >
+                    <WifiOff className="mr-1 h-3 w-3" />
+                    Offline
+                  </Badge>
+                ) : /* Priority 2: Live - only on character sheet pages with active session */
+                showBottomNav && character?.is_active && liveSession && isConnected ? (
+                  <Badge
+                    variant="outline"
+                    className="bg-green-500/10 border-green-500/30 text-green-400 text-xs animate-pulse"
+                    title={`Сессия активна · ${character.name}`}
+                  >
+                    <Radio className="mr-1 h-3 w-3" />
+                    Live
+                  </Badge>
+                ) : /* Priority 3: Connected - WebSocket connected, in campaign context */
+                showBottomNav && isConnected ? (
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-500/10 border-blue-500/30 text-blue-400 text-xs"
+                    title="Подключено к серверу"
+                  >
+                    <Wifi className="mr-1 h-3 w-3" />
+                    Connected
+                  </Badge>
+                ) : /* Priority 4: Disconnected on character sheet - WebSocket issue */
+                showBottomNav && !isConnected ? (
+                  <Badge
+                    variant="outline"
+                    className="bg-yellow-500/10 border-yellow-500/30 text-yellow-400 text-xs"
+                    title="Нет подключения к серверу"
+                  >
+                    <WifiOff className="mr-1 h-3 w-3" />
+                    Disconnected
+                  </Badge>
+                ) : /* Priority 5: Not on character sheet - show disconnected status */
+                !showBottomNav ? (
+                  <Badge
+                    variant="outline"
+                    className="bg-zinc-500/10 border-zinc-500/30 text-zinc-400 text-xs"
+                    title="Выберите персонажа для подключения"
+                  >
+                    <WifiOff className="mr-1 h-3 w-3" />
+                    Disconnected
+                  </Badge>
+                ) : null}
+              </>
+            )}
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -186,5 +248,14 @@ export default function PlayerLayout({ children }: { children: ReactNode }) {
         </nav>
       )}
     </div>
+  );
+}
+
+// Export the layout wrapped in PlayerSessionProvider
+export default function PlayerLayout({ children }: { children: ReactNode }) {
+  return (
+    <PlayerSessionProvider>
+      <PlayerLayoutInner>{children}</PlayerLayoutInner>
+    </PlayerSessionProvider>
   );
 }

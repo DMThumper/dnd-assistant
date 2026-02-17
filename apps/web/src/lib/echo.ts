@@ -10,6 +10,14 @@ declare global {
 }
 
 let echoInstance: Echo<"reverb"> | null = null;
+let authErrorCallback: ((error: boolean) => void) | null = null;
+
+/**
+ * Set callback for auth errors
+ */
+export function setAuthErrorCallback(callback: (error: boolean) => void): void {
+  authErrorCallback = callback;
+}
 
 /**
  * Initialize Laravel Echo with Reverb WebSocket connection
@@ -19,9 +27,11 @@ export function initializeEcho(authToken: string): Echo<"reverb"> {
     throw new Error("Echo can only be initialized in browser");
   }
 
-  // If already initialized with same token, return existing instance
+  // If already initialized, disconnect and create new instance with new token
   if (echoInstance) {
-    return echoInstance;
+    console.log("[Echo] Reinitializing with new token");
+    echoInstance.disconnect();
+    echoInstance = null;
   }
 
   // Make Pusher available globally
@@ -50,6 +60,39 @@ export function initializeEcho(authToken: string): Echo<"reverb"> {
         Accept: "application/json",
       },
     },
+    // Custom authorizer to catch auth errors
+    authorizer: (channel: { name: string }) => ({
+      authorize: (socketId: string, callback: (error: boolean | null, data: unknown) => void) => {
+        fetch(`${baseUrl}/broadcasting/auth`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            socket_id: socketId,
+            channel_name: channel.name,
+          }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              console.error("[Echo] Auth failed:", channel.name, response.status);
+              if (response.status === 403 || response.status === 401) {
+                authErrorCallback?.(true);
+              }
+              throw new Error(`Auth failed: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            callback(null, data);
+          })
+          .catch((error) => {
+            callback(true, null);
+          });
+      },
+    }),
   });
 
   window.Echo = echoInstance;

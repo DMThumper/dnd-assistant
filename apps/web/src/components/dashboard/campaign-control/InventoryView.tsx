@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { Character, InventoryItem } from "@/types/game";
 import { cn } from "@/lib/utils";
 import { Backpack, Package, Trash2 } from "lucide-react";
@@ -9,9 +10,10 @@ import { Button } from "@/components/ui/button";
 interface InventoryViewProps {
   character: Character;
   onCharacterUpdate: (character: Character) => void;
+  onMarkPendingUpdate?: (characterId: number, updateType?: "hp" | "xp" | "condition") => void;
 }
 
-export function InventoryView({ character, onCharacterUpdate }: InventoryViewProps) {
+export const InventoryView = memo(function InventoryView({ character, onCharacterUpdate }: InventoryViewProps) {
   const inventory = character.inventory || [];
   const equipment = character.equipment || {};
 
@@ -107,4 +109,12 @@ export function InventoryView({ character, onCharacterUpdate }: InventoryViewPro
       )}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison - only re-render if inventory or equipment changes
+  return (
+    prevProps.character.id === nextProps.character.id &&
+    prevProps.character.name === nextProps.character.name &&
+    JSON.stringify(prevProps.character.inventory) === JSON.stringify(nextProps.character.inventory) &&
+    JSON.stringify(prevProps.character.equipment) === JSON.stringify(nextProps.character.equipment)
+  );
+});

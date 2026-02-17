@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo, useCallback } from "react";
 import type { Character, Condition } from "@/types/game";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import { toast } from "sonner";
 interface ConditionsControlProps {
   character: Character;
   onCharacterUpdate: (character: Character) => void;
+  onMarkPendingUpdate: (characterId: number, updateType?: "hp" | "xp" | "condition") => void;
 }
 
 // D&D 5e standard conditions
@@ -55,7 +56,7 @@ const DND_CONDITIONS = [
   { key: "exhaustion_6", name: "Истощение 6" },
 ];
 
-export function ConditionsControl({ character, onCharacterUpdate }: ConditionsControlProps) {
+export const ConditionsControl = memo(function ConditionsControl({ character, onCharacterUpdate, onMarkPendingUpdate }: ConditionsControlProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState("");
@@ -80,6 +81,9 @@ export function ConditionsControl({ character, onCharacterUpdate }: ConditionsCo
       toast.error("Выберите состояние");
       return;
     }
+
+    // Mark as pending BEFORE API call
+    onMarkPendingUpdate(character.id, "condition");
 
     setIsLoading(true);
     try {
@@ -108,6 +112,9 @@ export function ConditionsControl({ character, onCharacterUpdate }: ConditionsCo
 
   // Remove condition
   const handleRemoveCondition = async (condition: Condition) => {
+    // Mark as pending BEFORE API call
+    onMarkPendingUpdate(character.id, "condition");
+
     setIsLoading(true);
     try {
       const response = await api.modifyCharacterConditions(character.id, "remove", condition);
@@ -232,4 +239,14 @@ export function ConditionsControl({ character, onCharacterUpdate }: ConditionsCo
       </Dialog>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison - only re-render if conditions change
+  const prevConditions = prevProps.character.conditions || [];
+  const nextConditions = nextProps.character.conditions || [];
+
+  return (
+    prevProps.character.id === nextProps.character.id &&
+    prevProps.character.name === nextProps.character.name &&
+    JSON.stringify(prevConditions) === JSON.stringify(nextConditions)
+  );
+});

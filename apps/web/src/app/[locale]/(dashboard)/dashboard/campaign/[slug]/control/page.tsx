@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -11,6 +11,7 @@ import { ArrowLeft, Tv, Settings, RefreshCw, Radio, Play, Square, Clock } from "
 import { cn } from "@/lib/utils";
 import { CharacterList } from "@/components/dashboard/campaign-control/CharacterList";
 import { CharacterControlPanel } from "@/components/dashboard/campaign-control/CharacterControlPanel";
+import { OnlinePlayersIndicator } from "@/components/dashboard/campaign-control/OnlinePlayersIndicator";
 import { useCampaignSync } from "@/hooks/useCampaignSync";
 import { toast } from "sonner";
 
@@ -26,10 +27,30 @@ export default function CampaignControlPage() {
   const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(false);
 
+  // Track DM-initiated updates to prevent duplicate updates from WebSocket echo
+  const pendingUpdatesRef = useRef<Set<string>>(new Set());
+
+  // Track live session in ref so callbacks can access current value
+  const liveSessionRef = useRef<LiveSession | null>(null);
+  liveSessionRef.current = liveSession;
+
   // Real-time sync with players via WebSocket
   const { isConnected, members } = useCampaignSync(campaign?.id || null, {
     onCharacterUpdated: (payload) => {
-      // Update character in local state
+      // Only process character events when there's an active live session
+      if (!liveSessionRef.current) {
+        return;
+      }
+
+      const updateKey = `char-${payload.character_id}`;
+
+      // Skip if this is an echo of our own update (DM-initiated)
+      if (pendingUpdatesRef.current.has(updateKey)) {
+        pendingUpdatesRef.current.delete(updateKey);
+        return;
+      }
+
+      // Update character in local state (only for player-initiated changes)
       setCharacters((prev) =>
         prev.map((c) => (c.id === payload.character_id ? payload.character : c))
       );
@@ -48,6 +69,19 @@ export default function CampaignControlPage() {
       }
     },
     onXPAwarded: (payload) => {
+      // Only process when there's an active live session
+      if (!liveSessionRef.current) {
+        return;
+      }
+
+      const updateKey = `xp-${payload.character_id}`;
+
+      // Skip if DM-initiated
+      if (pendingUpdatesRef.current.has(updateKey)) {
+        pendingUpdatesRef.current.delete(updateKey);
+        return;
+      }
+
       // Update character XP in local state
       setCharacters((prev) =>
         prev.map((c) =>
@@ -63,6 +97,19 @@ export default function CampaignControlPage() {
       }
     },
     onConditionChanged: (payload) => {
+      // Only process when there's an active live session
+      if (!liveSessionRef.current) {
+        return;
+      }
+
+      const updateKey = `cond-${payload.character_id}`;
+
+      // Skip if DM-initiated
+      if (pendingUpdatesRef.current.has(updateKey)) {
+        pendingUpdatesRef.current.delete(updateKey);
+        return;
+      }
+
       // Update conditions in local state
       setCharacters((prev) =>
         prev.map((c) =>
@@ -80,7 +127,12 @@ export default function CampaignControlPage() {
       }
     },
     onLevelUp: (payload) => {
-      // Update character with new level
+      // Only process when there's an active live session
+      if (!liveSessionRef.current) {
+        return;
+      }
+
+      // Level ups are always player-initiated, no need to filter
       setCharacters((prev) =>
         prev.map((c) => (c.id === payload.character_id ? payload.character : c))
       );
@@ -90,10 +142,16 @@ export default function CampaignControlPage() {
       toast.success(`${payload.character_name} достиг уровня ${payload.new_level}!`);
     },
     onMemberJoined: (member) => {
-      toast.info(`${member.name} присоединился к сессии`);
+      // Only show join notifications when session is active
+      if (liveSessionRef.current) {
+        toast.info(`${member.name} присоединился к сессии`);
+      }
     },
     onMemberLeft: (member) => {
-      toast.info(`${member.name} покинул сессию`);
+      // Only show leave notifications when session is active
+      if (liveSessionRef.current) {
+        toast.info(`${member.name} покинул сессию`);
+      }
     },
     onLiveSessionStarted: (payload) => {
       setLiveSession(payload.live_session);
@@ -140,7 +198,7 @@ export default function CampaignControlPage() {
   }, [campaign?.id]);
 
   // Fetch campaign characters
-  const fetchCharacters = useCallback(async () => {
+  const fetchCharacters = useCallback(async (autoSelectFirst = false) => {
     if (!slug) return;
 
     setIsLoading(true);
@@ -177,12 +235,12 @@ export default function CampaignControlPage() {
       const response = await api.getCampaignCharacters(foundCampaign.id);
       const allCharacters = response.data.characters;
 
-      // Filter to only active characters for control panel
-      const activeCharacters = allCharacters.filter(c => c.is_active && c.is_alive);
+      // Filter to only active AND alive characters for DM control panel
+      const activeCharacters = allCharacters.filter((c: Character) => c.is_active && c.is_alive);
       setCharacters(activeCharacters);
 
-      // Auto-select first character if none selected
-      if (activeCharacters.length > 0 && !selectedCharacter) {
+      // Auto-select first character only on initial load
+      if (autoSelectFirst && activeCharacters.length > 0) {
         setSelectedCharacter(activeCharacters[0]);
       }
     } catch (err) {
@@ -191,13 +249,29 @@ export default function CampaignControlPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [slug, selectedCharacter]);
+  }, [slug]);
 
   useEffect(() => {
-    fetchCharacters();
-  }, [fetchCharacters]);
+    fetchCharacters(true); // Auto-select first character on initial load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]); // Only depend on slug, not fetchCharacters
 
-  // Update character in local state after API changes
+  // Mark update as pending BEFORE API call to prevent WebSocket echo
+  const markPendingUpdate = useCallback((characterId: number, updateType?: "hp" | "xp" | "condition") => {
+    const updateKey = updateType === "xp"
+      ? `xp-${characterId}`
+      : updateType === "condition"
+        ? `cond-${characterId}`
+        : `char-${characterId}`;
+    pendingUpdatesRef.current.add(updateKey);
+
+    // Clear pending mark after a delay (in case WebSocket never arrives)
+    setTimeout(() => {
+      pendingUpdatesRef.current.delete(updateKey);
+    }, 3000);
+  }, []);
+
+  // Update character in local state after API changes (DM-initiated)
   const handleCharacterUpdate = useCallback((updatedCharacter: Character) => {
     setCharacters(prev =>
       prev.map(c => c.id === updatedCharacter.id ? updatedCharacter : c)
@@ -228,7 +302,7 @@ export default function CampaignControlPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4 text-center">
           <p className="text-red-400">{error}</p>
-          <Button onClick={fetchCharacters} variant="outline">
+          <Button onClick={() => fetchCharacters(true)} variant="outline">
             <RefreshCw className="mr-2 h-4 w-4" />
             Повторить
           </Button>
@@ -265,12 +339,17 @@ export default function CampaignControlPage() {
             </div>
             <p className="text-sm text-zinc-500">
               Центр управления
-              {members.length > 0 && ` · ${members.length} онлайн`}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Online Players Indicator */}
+          <OnlinePlayersIndicator
+            members={members}
+            isConnected={isConnected}
+          />
+
           {/* Live Session Control */}
           {liveSession ? (
             <div className="flex items-center gap-2">
@@ -335,7 +414,7 @@ export default function CampaignControlPage() {
             selectedCharacter={selectedCharacter}
             onSelectCharacter={handleSelectCharacter}
             campaignId={campaign?.id || 0}
-            onRefresh={fetchCharacters}
+            onRefresh={() => fetchCharacters(false)}
           />
         </div>
 
@@ -349,6 +428,7 @@ export default function CampaignControlPage() {
               character={selectedCharacter}
               campaignId={campaign?.id || 0}
               onCharacterUpdate={handleCharacterUpdate}
+              onMarkPendingUpdate={markPendingUpdate}
               onBack={() => setSelectedCharacter(null)}
             />
           ) : (

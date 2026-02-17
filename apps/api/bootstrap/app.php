@@ -14,20 +14,17 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
-        channels: __DIR__.'/../routes/channels.php',
+        // channels are loaded in BroadcastServiceProvider to avoid auto-registered routes
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
         // Trust all proxies (running behind Nginx/Coolify)
         $middleware->trustProxies(at: '*');
 
-        // Add custom CORS for broadcasting (handles OPTIONS + adds headers)
-        // This must run FIRST to catch preflight requests
-        $middleware->prepend(BroadcastCors::class);
-
         // Register middleware aliases
         $middleware->alias([
             'backoffice' => BackofficeAccess::class,
+            'broadcast.cors' => BroadcastCors::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,

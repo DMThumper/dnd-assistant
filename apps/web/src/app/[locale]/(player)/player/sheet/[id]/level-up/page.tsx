@@ -27,8 +27,10 @@ import {
   Check,
   Crown,
   Brain,
+  Radio,
 } from "lucide-react";
 import { toast } from "sonner";
+import { usePlayerSession } from "@/contexts/PlayerSessionContext";
 
 // Step type
 type LevelUpStep = "hp" | "class" | "asi" | "features" | "confirm";
@@ -57,6 +59,10 @@ export default function LevelUpPage() {
   // ASI state
   const [asiType, setAsiType] = useState<"asi" | "feat">("asi");
   const [asiAllocation, setAsiAllocation] = useState<Record<string, number>>({});
+
+  // WebSocket subscription is maintained by PlayerSessionContext at layout level
+  // No need for local subscription here
+  const { isConnected: isSessionConnected } = usePlayerSession();
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -337,6 +343,15 @@ export default function LevelUpPage() {
             <div className="flex items-center justify-center gap-2">
               <TrendingUp className="h-5 w-5 text-yellow-500" />
               <h1 className="font-bold text-lg">Повышение уровня</h1>
+              {isSessionConnected && (
+                <Badge
+                  variant="outline"
+                  className="bg-green-500/10 border-green-500/30 text-green-400 text-xs"
+                  title="Подключено к сессии"
+                >
+                  <Radio className="h-3 w-3 animate-pulse" />
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               {character.name} → Уровень {options.new_level}
@@ -822,8 +837,9 @@ export default function LevelUpPage() {
       </div>
 
       {/* Bottom navigation - high z-index to be above player nav */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 z-50">
-        <div className="flex gap-3 max-w-md mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+        <div className="w-full max-w-2xl bg-background border-t p-4">
+          <div className="flex gap-3 max-w-md mx-auto">
           <Button
             variant="outline"
             className="flex-1"
@@ -861,6 +877,7 @@ export default function LevelUpPage() {
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           )}
+          </div>
         </div>
       </div>
     </div>

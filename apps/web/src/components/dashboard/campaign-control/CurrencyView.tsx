@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import type { Character, Currency } from "@/types/game";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { toast } from "sonner";
 interface CurrencyViewProps {
   character: Character;
   onCharacterUpdate: (character: Character) => void;
+  onMarkPendingUpdate: (characterId: number, updateType?: "hp" | "xp" | "condition") => void;
 }
 
 const CURRENCY_CONFIG: Array<{
@@ -36,13 +37,16 @@ const CURRENCY_CONFIG: Array<{
   { key: "cp", name: "Медные", shortName: "ММ", color: "text-orange-400" },
 ];
 
-export function CurrencyView({ character, onCharacterUpdate }: CurrencyViewProps) {
+export const CurrencyView = memo(function CurrencyView({ character, onCharacterUpdate, onMarkPendingUpdate }: CurrencyViewProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<keyof Currency | null>(null);
   const [amount, setAmount] = useState("");
 
   const handleQuickChange = async (currencyType: keyof Currency, changeAmount: number) => {
+    // Mark as pending BEFORE API call
+    onMarkPendingUpdate(character.id);
+
     setIsLoading(true);
     try {
       const response = await api.modifyCurrency(character.id, currencyType, changeAmount);
@@ -65,6 +69,9 @@ export function CurrencyView({ character, onCharacterUpdate }: CurrencyViewProps
     }
 
     const finalAmount = type === "subtract" ? -parsedAmount : parsedAmount;
+
+    // Mark as pending BEFORE API call
+    onMarkPendingUpdate(character.id);
 
     setIsLoading(true);
     try {
@@ -204,4 +211,11 @@ export function CurrencyView({ character, onCharacterUpdate }: CurrencyViewProps
       </Dialog>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison - only re-render if currency changes
+  return (
+    prevProps.character.id === nextProps.character.id &&
+    prevProps.character.name === nextProps.character.name &&
+    JSON.stringify(prevProps.character.currency) === JSON.stringify(nextProps.character.currency)
+  );
+});
