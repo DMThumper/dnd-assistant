@@ -609,6 +609,43 @@ class CharacterController extends Controller
     }
 
     /**
+     * Update player notes (DM can edit player's personal notes)
+     */
+    public function updatePlayerNotes(Request $request, Character $character): JsonResponse
+    {
+        $user = $request->user();
+        $campaign = $character->campaign;
+
+        if ($campaign->user_id !== $user->id && !$user->hasRole('owner')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'У вас нет доступа к этому персонажу',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'player_notes' => 'nullable|string|max:10000',
+        ]);
+
+        $character->update([
+            'player_notes' => $validated['player_notes'] ?? '',
+        ]);
+
+        // Broadcast to player
+        broadcast(new CharacterUpdated($character->fresh(), 'player_notes_update', [
+            'player_notes' => $validated['player_notes'] ?? '',
+        ]))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'character' => $character->fresh()->formatForApi(),
+            ],
+            'message' => 'Заметки обновлены',
+        ]);
+    }
+
+    /**
      * Toggle inspiration
      */
     public function toggleInspiration(Request $request, Character $character): JsonResponse

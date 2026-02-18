@@ -66,7 +66,7 @@ class CharacterFactory extends Factory
             'prepared_spells' => [],
             'known_spells' => [],
             'spell_slots_remaining' => [],
-            'class_levels' => ['fighter' => 1],
+            'class_levels' => [],  // Empty by default, processLevelUp will initialize
             'subclasses' => [],
             'asi_choices' => [],
         ];

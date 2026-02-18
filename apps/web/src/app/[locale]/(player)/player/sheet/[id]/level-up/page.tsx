@@ -28,12 +28,13 @@ import {
   Crown,
   Brain,
   Radio,
+  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePlayerSession } from "@/contexts/PlayerSessionContext";
 
 // Step type
-type LevelUpStep = "hp" | "class" | "asi" | "features" | "confirm";
+type LevelUpStep = "hp" | "class" | "subclass" | "asi" | "features" | "confirm";
 
 export default function LevelUpPage() {
   const router = useRouter();
@@ -55,6 +56,9 @@ export default function LevelUpPage() {
   const [hpRoll, setHpRoll] = useState<number | null>(null);
   const [hpManualInput, setHpManualInput] = useState("");
   const [isRolling, setIsRolling] = useState(false);
+
+  // Subclass state
+  const [selectedSubclass, setSelectedSubclass] = useState<string | null>(null);
 
   // ASI state
   const [asiType, setAsiType] = useState<"asi" | "feat">("asi");
@@ -106,6 +110,11 @@ export default function LevelUpPage() {
     // Add class step only if multiclass is enabled
     if (options?.class_options.multiclass_enabled) {
       steps.push("class");
+    }
+
+    // Add subclass step if required (e.g., Rogue archetype at level 3)
+    if (options?.subclass_required && options.subclass_options && options.subclass_options.length > 0) {
+      steps.push("subclass");
     }
 
     // Add ASI step if available
@@ -240,6 +249,8 @@ export default function LevelUpPage() {
         return false;
       case "class":
         return !!choices.class;
+      case "subclass":
+        return selectedSubclass !== null;
       case "asi":
         if (asiType === "asi") {
           return getTotalAsiPoints() === (options?.asi_options?.asi.points || 2);
@@ -273,6 +284,11 @@ export default function LevelUpPage() {
         }
       } else if (hpMethod === "auto" && hpRoll !== null) {
         finalChoices.hp_roll = hpRoll;
+      }
+
+      // Add subclass choice
+      if (options.subclass_required && selectedSubclass) {
+        finalChoices.subclass = selectedSubclass;
       }
 
       // Add ASI choice
@@ -649,6 +665,76 @@ export default function LevelUpPage() {
           </Card>
         )}
 
+        {/* Subclass Step */}
+        {currentStep === "subclass" && options.subclass_required && options.subclass_options && (
+          <Card className="border-amber-500/30">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="h-6 w-6 text-amber-500" />
+                <CardTitle>{options.subclass_name || "Выбор подкласса"}</CardTitle>
+              </div>
+              <CardDescription>
+                Выберите специализацию для вашего класса
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {options.subclass_options.map((subclass) => {
+                // Get features for current level
+                const currentLevelFeatures = subclass.level_features?.[String(options.new_level)] || [];
+
+                return (
+                <div
+                  key={subclass.slug}
+                  className={cn(
+                    "p-4 rounded-lg border cursor-pointer transition-all",
+                    selectedSubclass === subclass.slug
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  )}
+                  onClick={() => setSelectedSubclass(subclass.slug)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                        selectedSubclass === subclass.slug ? "border-primary bg-primary" : "border-muted-foreground"
+                      )}
+                    >
+                      {selectedSubclass === subclass.slug && <Check className="h-3 w-3 text-primary-foreground" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-lg">{subclass.name}</p>
+                      {subclass.description && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {subclass.description}
+                        </p>
+                      )}
+
+                      {/* Show features for current level */}
+                      {currentLevelFeatures.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs text-amber-500 font-medium">
+                            Способности {options.new_level} уровня:
+                          </p>
+                          {currentLevelFeatures.map((feature, idx) => (
+                            <div key={idx} className="p-2 rounded bg-amber-500/10 border border-amber-500/20">
+                              <p className="text-sm font-medium text-amber-400">{feature.name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {feature.description}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
         {/* ASI Step */}
         {currentStep === "asi" && options.asi_available && options.asi_options && (
           <Card className="border-blue-500/30">
@@ -803,6 +889,15 @@ export default function LevelUpPage() {
                   <span className="font-bold">{formatModifier(options.proficiency_bonus)}</span>
                 </div>
 
+                {options.subclass_required && selectedSubclass && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                    <span className="text-muted-foreground">{options.subclass_name || "Подкласс"}</span>
+                    <Badge variant="outline" className="bg-amber-500/10 border-amber-500/30">
+                      {options.subclass_options?.find((s) => s.slug === selectedSubclass)?.name || selectedSubclass}
+                    </Badge>
+                  </div>
+                )}
+
                 {options.asi_available && asiType === "asi" && getTotalAsiPoints() > 0 && (
                   <div className="p-3 rounded-lg bg-muted/30">
                     <p className="text-muted-foreground mb-2">Улучшения характеристик:</p>
@@ -904,6 +999,8 @@ function getStepName(step: LevelUpStep): string {
       return "Здоровье";
     case "class":
       return "Класс";
+    case "subclass":
+      return "Подкласс";
     case "asi":
       return "Характеристики";
     case "features":

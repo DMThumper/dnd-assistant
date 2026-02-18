@@ -53,6 +53,7 @@ class Character extends Model
         'class_levels',
         'subclasses',
         'asi_choices',
+        'player_notes',
     ];
 
     protected function casts(): array
@@ -235,6 +236,7 @@ class Character extends Model
             'class_levels' => $this->class_levels ?? [],
             'subclasses' => $this->subclasses ?? [],
             'asi_choices' => $this->asi_choices ?? [],
+            'player_notes' => $this->player_notes ?? '',
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

@@ -1,55 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { api, ApiClientError } from "@/lib/api";
-import type { Character } from "@/types/game";
+import { usePlayerSession } from "@/contexts/PlayerSessionContext";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Backpack, Coins, Weight } from "lucide-react";
 
-const ACTIVE_CHARACTER_KEY = "dnd-player-active-character";
-
 export default function InventoryPage() {
   const t = useTranslations();
   const router = useRouter();
-  const [character, setCharacter] = useState<Character | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { character, activeCharacterId, isValidating } = usePlayerSession();
 
+  // Redirect if no active character after validation
   useEffect(() => {
-    const fetchCharacter = async () => {
-      // Get active character ID from localStorage
-      const activeCharId = localStorage.getItem(ACTIVE_CHARACTER_KEY);
+    if (!isValidating && !activeCharacterId) {
+      router.push("/player");
+    }
+  }, [isValidating, activeCharacterId, router]);
 
-      if (!activeCharId) {
-        // No active character, redirect to campaigns
-        router.push("/player");
-        return;
-      }
-
-      try {
-        const response = await api.getCharacter(Number(activeCharId));
-        setCharacter(response.data.character);
-      } catch (err) {
-        if (err instanceof ApiClientError) {
-          setError(err.message);
-        } else {
-          setError(t("errors.generic"));
-        }
-        // Clear invalid character ID
-        localStorage.removeItem(ACTIVE_CHARACTER_KEY);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void fetchCharacter();
-  }, [router, t]);
-
-  if (isLoading) {
+  if (isValidating) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -57,11 +29,11 @@ export default function InventoryPage() {
     );
   }
 
-  if (error || !character) {
+  if (!character) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center">
         <Backpack className="h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-muted-foreground">{error || "Персонаж не найден"}</p>
+        <p className="text-muted-foreground">Персонаж не найден</p>
       </div>
     );
   }

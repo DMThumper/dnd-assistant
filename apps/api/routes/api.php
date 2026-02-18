@@ -192,6 +192,7 @@ Route::prefix('v1')->group(function () {
                 Route::post('give-item', [BackofficeCharacterController::class, 'giveItem']);
                 Route::post('modify-currency', [BackofficeCharacterController::class, 'modifyCurrency']);
                 Route::post('toggle-inspiration', [BackofficeCharacterController::class, 'toggleInspiration']);
+                Route::patch('player-notes', [BackofficeCharacterController::class, 'updatePlayerNotes']);
             });
 
             // -----------------------------------------------------------------

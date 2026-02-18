@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             ClassesSeeder::class,
             MonstersSeeder::class,
             SpellsSeeder::class,
+            FeatsSeeder::class,
             // TODO: Add these seeders as content is created
             // ItemsSeeder::class,
             // RulesSeeder::class,

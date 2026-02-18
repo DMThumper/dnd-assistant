@@ -28,6 +28,9 @@ export function StepSkills({
   // Get racial skill proficiencies (fixed)
   const racialSkills = race?.skill_proficiencies || [];
 
+  // Filter out any racial skills from selectedSkills (defensive - they shouldn't be there)
+  const classSelectedSkills = selectedSkills.filter(sk => !racialSkills.includes(sk));
+
   // Get ability name for skill
   const getAbilityName = (key: string): string => {
     const names: Record<string, string> = {
@@ -48,12 +51,12 @@ export function StepSkills({
       return;
     }
 
-    if (selectedSkills.includes(skillKey)) {
+    if (classSelectedSkills.includes(skillKey)) {
       // Remove skill
-      onSkillsChange(selectedSkills.filter((s) => s !== skillKey));
-    } else if (selectedSkills.length < maxSkills) {
+      onSkillsChange(classSelectedSkills.filter((s) => s !== skillKey));
+    } else if (classSelectedSkills.length < maxSkills) {
       // Add skill
-      onSkillsChange([...selectedSkills, skillKey]);
+      onSkillsChange([...classSelectedSkills, skillKey]);
     }
   };
 
@@ -85,10 +88,10 @@ export function StepSkills({
       <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
         <span className="text-sm font-medium">Выбрано навыков:</span>
         <Badge
-          variant={selectedSkills.length === maxSkills ? "default" : "secondary"}
+          variant={classSelectedSkills.length === maxSkills ? "default" : "secondary"}
           className="text-lg px-3"
         >
-          {selectedSkills.length} / {maxSkills}
+          {classSelectedSkills.length} / {maxSkills}
         </Badge>
       </div>
 
@@ -107,10 +110,10 @@ export function StepSkills({
       {/* Skills grid */}
       <div className="grid gap-2">
         {rules.skills.map((skill) => {
-          const isSelected = selectedSkills.includes(skill.key);
+          const isSelected = classSelectedSkills.includes(skill.key);
           const isRacial = isRacialSkill(skill.key);
           const isAvailable = isClassSkill(skill.key);
-          const canSelect = isAvailable && !isRacial && (isSelected || selectedSkills.length < maxSkills);
+          const canSelect = isAvailable && !isRacial && (isSelected || classSelectedSkills.length < maxSkills);
 
           return (
             <Card

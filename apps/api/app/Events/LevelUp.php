@@ -45,6 +45,8 @@ class LevelUp implements ShouldBroadcast
      */
     public function broadcastWith(): array
     {
+        // Only send essential data to avoid Pusher payload limit (~10KB)
+        // Frontend should refetch character data after receiving this event
         return [
             'character_id' => $this->character->id,
             'character_name' => $this->character->getTranslation('name', 'ru'),
@@ -52,8 +54,8 @@ class LevelUp implements ShouldBroadcast
             'previous_level' => $this->previousLevel,
             'new_level' => $this->newLevel,
             'class_slug' => $this->classSlug,
-            'new_features' => $this->newFeatures,
-            'character' => $this->character->formatForApi(),
+            // Only feature names to keep payload small
+            'new_feature_names' => array_map(fn($f) => $f['name'] ?? '', $this->newFeatures),
         ];
     }
 

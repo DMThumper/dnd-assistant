@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Loader2,
   ChevronLeft,
+  ChevronRight,
   Shield,
   Heart,
   Plus,
@@ -23,8 +24,14 @@ import {
   Star,
   TrendingUp,
   RefreshCw,
+  ScrollText,
+  StickyNote,
+  Edit3,
+  Check,
+  X,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { usePlayerSession } from "@/contexts/PlayerSessionContext";
 import { toast } from "sonner";
 
@@ -85,6 +92,11 @@ export default function CharacterSheetPage() {
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Player notes editing state
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState("");
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+
   // Use context character if available, otherwise use local state
   const character = contextCharacter || localCharacter;
   const setCharacter = contextCharacter ? updateCharacter : setLocalCharacter;
@@ -126,6 +138,33 @@ export default function CharacterSheetPage() {
       console.error("Failed to update HP:", err);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const startEditingNotes = () => {
+    setNotesValue(character?.player_notes ?? "");
+    setIsEditingNotes(true);
+  };
+
+  const cancelEditingNotes = () => {
+    setIsEditingNotes(false);
+    setNotesValue("");
+  };
+
+  const saveNotes = async () => {
+    if (!character || isSavingNotes) return;
+
+    setIsSavingNotes(true);
+    try {
+      const response = await api.updateCharacter(characterId, { player_notes: notesValue });
+      setCharacter(response.data.character);
+      setIsEditingNotes(false);
+      toast.success("Заметки сохранены");
+    } catch (err) {
+      console.error("Failed to save notes:", err);
+      toast.error("Не удалось сохранить заметки");
+    } finally {
+      setIsSavingNotes(false);
     }
   };
 
@@ -357,37 +396,50 @@ export default function CharacterSheetPage() {
         </Card>
       )}
 
-      {/* Custom Rules (perks/afflictions) */}
+      {/* DM Custom Rules (read-only for player) */}
       {character.custom_rules && character.custom_rules.length > 0 && (
-        <Card className="bg-card/50">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="font-semibold">Особые эффекты</span>
-            </div>
-            <div className="space-y-2">
-              {character.custom_rules.map((rule) => (
-                <div
-                  key={rule.id}
-                  className="flex items-start gap-2 text-sm"
-                >
-                  <span>{rule.icon || "✦"}</span>
-                  <div>
-                    <span className="font-medium" style={{ color: rule.color }}>
-                      {rule.name}
-                    </span>
-                    {rule.effects && rule.effects.length > 0 && (
-                      <div className="text-muted-foreground text-xs">
-                        {rule.effects.map((effect, i) => (
-                          <span key={i} className={effect.type === "bonus" ? "text-green-400" : "text-red-400"}>
-                            {effect.description}{i < rule.effects.length - 1 ? ", " : ""}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+        <Card className="bg-purple-500/10 border-purple-500/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ScrollText className="h-5 w-5 text-purple-400" />
+              <span className="text-purple-300">Особые правила от Мастера</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {character.custom_rules.map((rule) => (
+              <div
+                key={rule.id}
+                className="flex items-start gap-2 text-sm p-2 rounded-md bg-purple-500/10"
+              >
+                <span className="text-lg">{rule.icon || "✦"}</span>
+                <div className="flex-1">
+                  <span className="font-semibold" style={{ color: rule.color || "#c084fc" }}>
+                    {rule.name}
+                  </span>
+                  {rule.description && (
+                    <p className="text-muted-foreground text-xs mt-1">{rule.description}</p>
+                  )}
+                  {rule.effects && rule.effects.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {rule.effects.map((effect, i) => (
+                        <Badge
+                          key={i}
+                          variant="outline"
+                          className={cn(
+                            "text-xs",
+                            effect.type === "bonus"
+                              ? "border-green-500/50 text-green-400"
+                              : "border-red-500/50 text-red-400"
+                          )}
+                        >
+                          {effect.type === "bonus" ? "+" : "-"} {effect.description}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}
@@ -476,22 +528,74 @@ export default function CharacterSheetPage() {
         </CardContent>
       </Card>
 
-      {/* Features Section */}
-      {(character.features ?? []).length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("player.sheet.features")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {(character.features ?? []).map((feature, index) => (
-              <div key={index} className="text-sm">
-                <span className="font-medium">{feature.name}</span>
-                <span className="text-muted-foreground"> — {feature.description}</span>
+      {/* Player Notes (editable) */}
+      <Card className="bg-blue-500/10 border-blue-500/30">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <StickyNote className="h-5 w-5 text-blue-400" />
+              <span className="text-blue-300">Мои заметки</span>
+            </CardTitle>
+            {!isEditingNotes && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20"
+                onClick={startEditingNotes}
+              >
+                <Edit3 className="h-4 w-4 mr-1" />
+                Редактировать
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isEditingNotes ? (
+            <div className="space-y-2">
+              <Textarea
+                value={notesValue}
+                onChange={(e) => setNotesValue(e.target.value)}
+                placeholder="Напишите свои заметки здесь..."
+                className="min-h-[120px] bg-blue-500/5 border-blue-500/30 focus:border-blue-500"
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={cancelEditingNotes}
+                  disabled={isSavingNotes}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Отмена
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={saveNotes}
+                  disabled={isSavingNotes}
+                  className="bg-blue-500 hover:bg-blue-600"
+                >
+                  {isSavingNotes ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-1" />
+                  )}
+                  Сохранить
+                </Button>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+            </div>
+          ) : (
+            <div className="text-sm">
+              {character.player_notes ? (
+                <p className="whitespace-pre-wrap text-muted-foreground">{character.player_notes}</p>
+              ) : (
+                <p className="text-muted-foreground/50 italic">
+                  Нет заметок. Нажмите &quot;Редактировать&quot;, чтобы добавить.
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Class Resources */}
       {(character.class_resources ?? []).length > 0 && (

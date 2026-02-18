@@ -135,6 +135,7 @@ class CharacterController extends Controller
             'death_saves' => 'sometimes|array',
             'class_resources' => 'sometimes|array',
             'currency' => 'sometimes|array',
+            'player_notes' => 'sometimes|nullable|string|max:10000',
         ]);
 
         // Handle HP changes via CharacterService (triggers broadcast)
@@ -357,8 +358,9 @@ class CharacterController extends Controller
             ->groupBy('parent_slug')
             ->map(fn ($group) => $group->map(fn (Race $race) => $race->getForSetting($setting)));
 
-        // Get classes available in this setting
+        // Get classes available in this setting (only base classes, not subclasses)
         $classes = $setting->characterClasses()
+            ->whereNull('parent_slug')
             ->orderBy('sort_order')
             ->get()
             ->map(fn (CharacterClass $class) => $class->getForSetting($setting));

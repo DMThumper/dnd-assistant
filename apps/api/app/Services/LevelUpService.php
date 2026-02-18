@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Events\LevelUp;
 use App\Models\Character;
 use App\Models\CharacterClass;
+use App\Models\Feat;
 use App\Models\RuleSystem;
 use Illuminate\Support\Collection;
 
@@ -102,6 +103,31 @@ class LevelUpService
                 $levelInClass = ($classLevels[$primaryClassSlug] ?? $character->level) + 1;
                 $options['features'] = $this->getClassFeaturesAtLevel($class, $levelInClass);
                 $options['hp_options']['hit_die'] = $class->hit_die;
+
+                // Check if this level requires subclass selection
+                $subclassLevel = (int) ($class->subclass_level ?? 0);
+                $existingSubclasses = $character->subclasses ?? [];
+                $hasSubclass = isset($existingSubclasses[$primaryClassSlug]);
+
+                if ($subclassLevel > 0 && $levelInClass === $subclassLevel && !$hasSubclass) {
+                    $options['subclass_required'] = true;
+                    $options['subclass_name'] = $class->getTranslation('subclass_name', 'ru') ?? 'Подкласс';
+                    $options['subclass_options'] = $this->getSubclassOptions($character, $primaryClassSlug);
+                }
+
+                // Add subclass features for existing subclass at new level
+                if ($hasSubclass) {
+                    $subclassSlug = $existingSubclasses[$primaryClassSlug];
+                    $subclass = CharacterClass::where('slug', $subclassSlug)->first();
+                    if ($subclass) {
+                        $subclassFeatures = $this->getClassFeaturesAtLevel($subclass, $levelInClass);
+                        foreach ($subclassFeatures as $feature) {
+                            $feature['source'] = 'subclass';
+                            $feature['subclass'] = $subclass->getTranslation('name', 'ru');
+                            $options['features'][] = $feature;
+                        }
+                    }
+                }
             }
         }
 
@@ -139,11 +165,17 @@ class LevelUpService
         $classLevels = $character->class_levels ?? [];
         $levelingClass = $choices['class'] ?? $character->class_slug;
 
-        if (empty($classLevels)) {
-            // First time using class_levels, initialize from current
-            $classLevels[$character->class_slug] = $character->level;
+        // Initialize class_levels for the leveling class if not present
+        if (empty($classLevels) || !isset($classLevels[$levelingClass])) {
+            // For the primary class, initialize from current character level
+            if ($levelingClass === $character->class_slug) {
+                $classLevels[$levelingClass] = $character->level;
+            } else {
+                // For a new multiclass, start at 0 (will be incremented below)
+                $classLevels[$levelingClass] = 0;
+            }
         }
-        $classLevels[$levelingClass] = ($classLevels[$levelingClass] ?? 0) + 1;
+        $classLevels[$levelingClass]++;
 
         // Update proficiency bonus
         $proficiencyBonus = floor(($newLevel - 1) / 4) + 2;
@@ -166,6 +198,23 @@ class LevelUpService
                     }
                 }
                 $character->abilities = $abilities;
+            }
+
+            // Add feat to features if type is 'feat'
+            if ($choices['asi']['type'] === 'feat' && !empty($choices['asi']['choices']['feat'])) {
+                $featSlug = $choices['asi']['choices']['feat'];
+                $feat = Feat::where('slug', $featSlug)->first();
+                if ($feat) {
+                    $features = $character->features ?? [];
+                    $features[] = [
+                        'source' => 'feat',
+                        'name' => $feat->getTranslation('name', 'ru'),
+                        'description' => $feat->getTranslation('description', 'ru'),
+                        'slug' => $feat->slug,
+                        'benefits' => $feat->benefits,
+                    ];
+                    $character->features = $features;
+                }
             }
         }
 
@@ -191,6 +240,31 @@ class LevelUpService
             $subclasses = $character->subclasses ?? [];
             $subclasses[$levelingClass] = $choices['subclass'];
             $character->subclasses = $subclasses;
+
+            // Add subclass features to character's features
+            $subclass = CharacterClass::where('slug', $choices['subclass'])->first();
+            if ($subclass) {
+                // Calculate level in the specific class (for multiclass support)
+                $levelInClass = $classLevels[$levelingClass] ?? $newLevel;
+
+                // Use the model's method to get features
+                $levelFeatures = $subclass->getFeaturesAtLevel($levelInClass);
+
+                if (!empty($levelFeatures)) {
+                    $features = $character->features ?? [];
+                    foreach ($levelFeatures as $feature) {
+                        $features[] = [
+                            'source' => 'subclass',
+                            'subclass' => $subclass->getTranslation('name', 'ru'),
+                            'name' => $feature['name'] ?? '',
+                            'description' => $feature['description'] ?? '',
+                            'type' => $feature['type'] ?? 'feature',
+                            'level' => $newLevel,
+                        ];
+                    }
+                    $character->features = $features;
+                }
+            }
         }
 
         // Add new features
@@ -228,7 +302,7 @@ class LevelUpService
         $hitDie = $class ? $class->hit_die : 'd8';
         $dieMax = (int) str_replace('d', '', $hitDie);
 
-        $conMod = floor(($character->abilities['constitution'] ?? 10) - 10) / 2;
+        $conMod = (int) floor((($character->abilities['constitution'] ?? 10) - 10) / 2);
         $average = floor($dieMax / 2) + 1 + $conMod;
 
         return [
@@ -259,10 +333,10 @@ class LevelUpService
         $currentClasses = array_keys($character->class_levels ?? [$character->class_slug => $character->level]);
         $availableClasses = [];
 
-        // Get all classes for this setting
+        // Get all BASE classes for this setting (exclude subclasses)
         $allClasses = CharacterClass::whereHas('settings', function ($q) use ($campaign) {
             $q->where('settings.id', $campaign->setting_id);
-        })->get()->keyBy('slug');
+        })->whereNull('parent_slug')->get()->keyBy('slug');
 
         // Current classes are always available
         foreach ($currentClasses as $classSlug) {
@@ -383,9 +457,9 @@ class LevelUpService
             'feats_enabled' => $featsEnabled,
         ];
 
-        // TODO: Add feat list when Feats are implemented
+        // Get feats from setting
         if ($featsEnabled) {
-            $options['feats'] = [];
+            $options['feats'] = $this->getAvailableFeats($character);
         }
 
         return $options;
@@ -401,6 +475,82 @@ class LevelUpService
     }
 
     /**
+     * Get available subclass options for a class
+     */
+    private function getSubclassOptions(Character $character, string $classSlug): array
+    {
+        $campaign = $character->campaign;
+        $setting = $campaign->setting;
+
+        // Get subclasses for this class from the setting
+        $subclasses = $setting->characterClasses()
+            ->where('parent_slug', $classSlug)
+            ->orderBy('sort_order')
+            ->get();
+
+        return $subclasses->map(function (CharacterClass $subclass) use ($setting) {
+            $data = $subclass->getForSetting($setting);
+            return [
+                'slug' => $data['slug'],
+                'name' => $data['name'],
+                'description' => $data['description'],
+                'level_features' => $data['level_features'] ?? [],
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * Get available feats for a character
+     */
+    private function getAvailableFeats(Character $character): array
+    {
+        $campaign = $character->campaign;
+        $setting = $campaign->setting;
+
+        // Get already taken feats
+        $takenFeats = collect($character->asi_choices ?? [])
+            ->where('type', 'feat')
+            ->pluck('choices.feat')
+            ->filter()
+            ->all();
+
+        // Get feats from setting
+        $feats = $setting->feats()
+            ->orderBy('sort_order')
+            ->get();
+
+        // Build character data for prerequisite checking
+        $characterData = [
+            'abilities' => $character->abilities,
+            'proficiencies' => array_merge(
+                $character->proficiencies['armor'] ?? [],
+                $character->proficiencies['weapons'] ?? [],
+                $character->skill_proficiencies ?? []
+            ),
+            'is_spellcaster' => CharacterClass::where('slug', $character->class_slug)->first()?->is_spellcaster ?? false,
+        ];
+
+        return $feats->map(function (Feat $feat) use ($setting, $takenFeats, $characterData) {
+            $data = $feat->getForSetting($setting);
+            $alreadyTaken = in_array($feat->slug, $takenFeats);
+            $canTake = !$alreadyTaken || $feat->repeatable;
+            $meetsPrerequisites = $feat->meetsPrerequisites($characterData);
+
+            return [
+                'slug' => $data['slug'],
+                'name' => $data['name'],
+                'description' => $data['description'],
+                'prerequisites' => $data['prerequisites'],
+                'benefits' => $data['benefits'],
+                'repeatable' => $data['repeatable'],
+                'available' => $canTake && $meetsPrerequisites,
+                'already_taken' => $alreadyTaken,
+                'meets_prerequisites' => $meetsPrerequisites,
+            ];
+        })->values()->all();
+    }
+
+    /**
      * Calculate HP increase based on choices
      */
     private function calculateHpIncrease(Character $character, array $choices): int
@@ -412,7 +562,7 @@ class LevelUpService
         $hitDie = $class ? $class->hit_die : 'd8';
         $dieMax = (int) str_replace('d', '', $hitDie);
 
-        $conMod = floor((($character->abilities['constitution'] ?? 10) - 10) / 2);
+        $conMod = (int) floor((($character->abilities['constitution'] ?? 10) - 10) / 2);
 
         if ($hpMethod === 'roll' && isset($choices['hp_roll'])) {
             // Use rolled value (validated to be within range)

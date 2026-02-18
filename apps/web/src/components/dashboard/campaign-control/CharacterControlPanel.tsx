@@ -19,6 +19,7 @@ import { HpControl } from "./HpControl";
 import { InspirationControl } from "./InspirationControl";
 import { ConditionsControl } from "./ConditionsControl";
 import { CustomRulesControl } from "./CustomRulesControl";
+import { PlayerNotesControl } from "./PlayerNotesControl";
 import { ActionsPanel } from "./ActionsPanel";
 import { AbilitiesView } from "./AbilitiesView";
 import { SkillsView } from "./SkillsView";
@@ -216,6 +217,13 @@ export const CharacterControlPanel = memo(function CharacterControlPanel({
 
               {/* Custom Rules */}
               <CustomRulesControl
+                character={character}
+                onCharacterUpdate={onCharacterUpdate}
+                onMarkPendingUpdate={onMarkPendingUpdate}
+              />
+
+              {/* Player Notes */}
+              <PlayerNotesControl
                 character={character}
                 onCharacterUpdate={onCharacterUpdate}
                 onMarkPendingUpdate={onMarkPendingUpdate}

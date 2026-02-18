@@ -273,7 +273,7 @@ class ApiClient {
     return this.request<CharacterResponse>(`/player/characters/${characterId}`);
   }
 
-  async updateCharacter(characterId: number, data: Partial<Pick<Character, "current_hp" | "temp_hp" | "inspiration" | "death_saves" | "class_resources" | "currency">>) {
+  async updateCharacter(characterId: number, data: Partial<Pick<Character, "current_hp" | "temp_hp" | "inspiration" | "death_saves" | "class_resources" | "currency" | "player_notes">>) {
     return this.request<CharacterResponse>(`/player/characters/${characterId}`, {
       method: "PATCH",
       body: data,
@@ -623,6 +623,19 @@ class ApiClient {
       `/backoffice/characters/${characterId}/toggle-inspiration`,
       {
         method: "POST",
+      }
+    );
+  }
+
+  /**
+   * Update player notes (DM can edit player's personal notes)
+   */
+  async updatePlayerNotes(characterId: number, playerNotes: string) {
+    return this.request<CharacterResponse>(
+      `/backoffice/characters/${characterId}/player-notes`,
+      {
+        method: "PATCH",
+        body: { player_notes: playerNotes },
       }
     );
   }

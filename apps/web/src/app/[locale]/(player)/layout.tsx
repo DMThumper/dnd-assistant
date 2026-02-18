@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PlayerSessionProvider, usePlayerSession } from "@/contexts/PlayerSessionContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import { cn } from "@/lib/utils";
-import { Loader2, Swords, BookOpen, Backpack, LogOut, Radio, WifiOff, Wifi } from "lucide-react";
+import { Loader2, Swords, Sparkles, BookOpen, Backpack, LogOut, Radio, WifiOff, Wifi } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,24 +57,30 @@ function PlayerLayoutInner({ children }: { children: ReactNode }) {
 
   // Build nav items with dynamic character ID
   const sheetHref = activeCharacterId ? `/player/sheet/${activeCharacterId}` : "/player/sheet";
-  const charIdStr = activeCharacterId ? String(activeCharacterId) : null;
+  const featuresHref = activeCharacterId ? `/player/sheet/${activeCharacterId}/features` : "/player/features";
 
   const navItems: NavItem[] = [
     {
       href: sheetHref,
-      label: t("player.sheet.abilities"),
+      label: t("player.nav.sheet"),
       icon: <Swords className="h-5 w-5" />,
-      match: /\/player\/sheet/,
+      match: /\/player\/sheet(\/\d+)?$/,
+    },
+    {
+      href: featuresHref,
+      label: t("player.nav.features"),
+      icon: <Sparkles className="h-5 w-5" />,
+      match: /\/player\/(sheet\/\d+\/)?features/,
     },
     {
       href: "/player/spells",
-      label: t("player.sheet.spells"),
+      label: t("player.nav.spells"),
       icon: <BookOpen className="h-5 w-5" />,
       match: /\/player\/spells/,
     },
     {
       href: "/player/inventory",
-      label: t("player.sheet.inventory"),
+      label: t("player.nav.inventory"),
       icon: <Backpack className="h-5 w-5" />,
       match: /\/player\/inventory/,
     },
@@ -101,7 +107,8 @@ function PlayerLayoutInner({ children }: { children: ReactNode }) {
   // Check if we're on a page that should show bottom nav (character sheet views)
   const showBottomNav = pathname.includes("/player/sheet") ||
                         pathname.includes("/player/spells") ||
-                        pathname.includes("/player/inventory");
+                        pathname.includes("/player/inventory") ||
+                        pathname.includes("/player/features");
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -132,7 +139,7 @@ function PlayerLayoutInner({ children }: { children: ReactNode }) {
                     <WifiOff className="mr-1 h-3 w-3" />
                     Offline
                   </Badge>
-                ) : /* Priority 2: Live - only on character sheet pages with active session */
+                ) : /* Priority 2: Live - active character + live session + connected */
                 showBottomNav && character?.is_active && liveSession && isConnected ? (
                   <Badge
                     variant="outline"
@@ -142,8 +149,8 @@ function PlayerLayoutInner({ children }: { children: ReactNode }) {
                     <Radio className="mr-1 h-3 w-3" />
                     Live
                   </Badge>
-                ) : /* Priority 3: Connected - WebSocket connected, in campaign context */
-                showBottomNav && isConnected ? (
+                ) : /* Priority 3: Connected - active character + connected (no live session) */
+                showBottomNav && character?.is_active && isConnected ? (
                   <Badge
                     variant="outline"
                     className="bg-blue-500/10 border-blue-500/30 text-blue-400 text-xs"
@@ -152,8 +159,18 @@ function PlayerLayoutInner({ children }: { children: ReactNode }) {
                     <Wifi className="mr-1 h-3 w-3" />
                     Connected
                   </Badge>
-                ) : /* Priority 4: Disconnected on character sheet - WebSocket issue */
-                showBottomNav && !isConnected ? (
+                ) : /* Priority 4: Sandbox mode - inactive character (experimentation) */
+                showBottomNav && character && !character.is_active ? (
+                  <Badge
+                    variant="outline"
+                    className="bg-amber-500/10 border-amber-500/30 text-amber-400 text-xs"
+                    title="Режим экспериментирования (персонаж неактивен)"
+                  >
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    Sandbox
+                  </Badge>
+                ) : /* Priority 5: Disconnected - active character but connection lost */
+                showBottomNav && character?.is_active && !isConnected ? (
                   <Badge
                     variant="outline"
                     className="bg-yellow-500/10 border-yellow-500/30 text-yellow-400 text-xs"
@@ -162,17 +179,8 @@ function PlayerLayoutInner({ children }: { children: ReactNode }) {
                     <WifiOff className="mr-1 h-3 w-3" />
                     Disconnected
                   </Badge>
-                ) : /* Priority 5: Not on character sheet - show disconnected status */
-                !showBottomNav ? (
-                  <Badge
-                    variant="outline"
-                    className="bg-zinc-500/10 border-zinc-500/30 text-zinc-400 text-xs"
-                    title="Выберите персонажа для подключения"
-                  >
-                    <WifiOff className="mr-1 h-3 w-3" />
-                    Disconnected
-                  </Badge>
-                ) : null}
+                ) : /* Priority 6: Not on character sheet - no status needed */
+                null}
               </>
             )}
           </div>

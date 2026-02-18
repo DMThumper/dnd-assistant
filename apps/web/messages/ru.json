@@ -115,6 +115,12 @@
       "graveyard": "Кладбище",
       "noCharacters": "У вас ещё нет персонажей в этой кампании"
     },
+    "nav": {
+      "sheet": "Лист",
+      "features": "Умения",
+      "spells": "Заклинания",
+      "inventory": "Инвентарь"
+    },
     "sheet": {
       "level": "Уровень",
       "experience": "Опыт",

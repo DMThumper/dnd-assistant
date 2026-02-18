@@ -239,6 +239,7 @@ export interface Character {
   class_levels: Record<string, number>;
   subclasses: Record<string, string>;
   asi_choices: AsiChoice[];
+  player_notes: string;
   created_at: string;
   updated_at: string;
 }
@@ -611,6 +612,18 @@ export interface LevelUpFeature {
   options?: string[];
 }
 
+// Subclass option
+export interface SubclassOption {
+  slug: string;
+  name: string;
+  description?: string;
+  level_features?: Record<string, Array<{
+    name: string;
+    description: string;
+    type?: string;
+  }>>;
+}
+
 // Level up options response
 export interface LevelUpOptionsResponse {
   new_level: number;
@@ -627,6 +640,10 @@ export interface LevelUpOptionsResponse {
     feats?: Array<{ slug: string; name: string; description: string }>;
   };
   features: LevelUpFeature[];
+  // Subclass selection (e.g., Rogue archetype at level 3)
+  subclass_required?: boolean;
+  subclass_name?: string; // e.g., "Архетип плута"
+  subclass_options?: SubclassOption[];
 }
 
 // Level up choices (request body)

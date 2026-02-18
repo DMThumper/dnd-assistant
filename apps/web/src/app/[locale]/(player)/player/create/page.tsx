@@ -121,7 +121,13 @@ export default function CharacterCreatePage() {
       case "skills":
         if (!wizardState.characterClass) return false;
         const requiredSkills = wizardState.characterClass.skill_choices;
-        return wizardState.skillProficiencies.length >= requiredSkills;
+        // Filter out racial skills from the count (they don't count toward class choices)
+        const race = wizardState.subrace || wizardState.race;
+        const racialSkills = race?.skill_proficiencies || [];
+        const classSkillsSelected = wizardState.skillProficiencies.filter(
+          (sk) => !racialSkills.includes(sk)
+        );
+        return classSkillsSelected.length >= requiredSkills;
       case "spells":
         if (!wizardState.characterClass) return false;
         // Check cantrip and spell limits
@@ -275,8 +281,8 @@ export default function CharacterCreatePage() {
             subraces={creationData.subraces}
             selectedRace={wizardState.race}
             selectedSubrace={wizardState.subrace}
-            onSelectRace={(race) => updateWizardState({ race, subrace: null, abilityBonusChoices: {} })}
-            onSelectSubrace={(subrace) => updateWizardState({ subrace })}
+            onSelectRace={(race) => updateWizardState({ race, subrace: null, abilityBonusChoices: {}, skillProficiencies: [] })}
+            onSelectSubrace={(subrace) => updateWizardState({ subrace, skillProficiencies: [] })}
           />
         )}
 
@@ -337,7 +343,7 @@ export default function CharacterCreatePage() {
 
       {/* Navigation buttons */}
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4">
-        <div className="flex gap-3">
+        <div className="flex gap-3 max-w-md mx-auto">
           <Button variant="outline" onClick={handleBack} className="flex-1">
             <ChevronLeft className="mr-2 h-4 w-4" />
             {wizardState.step === 0 ? "Отмена" : "Назад"}
