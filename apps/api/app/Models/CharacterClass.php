@@ -19,6 +19,7 @@ class CharacterClass extends Model
         'name',
         'description',
         'slug',
+        'parent_slug',
         'hit_die',
         'primary_abilities',
         'saving_throws',
@@ -70,6 +71,30 @@ class CharacterClass extends Model
         return $this->belongsToMany(Setting::class, 'setting_classes')
             ->withPivot('overrides')
             ->withTimestamps();
+    }
+
+    /**
+     * Parent class (for subclasses)
+     */
+    public function parent(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_slug', 'slug');
+    }
+
+    /**
+     * Subclasses of this class
+     */
+    public function subclasses(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(self::class, 'parent_slug', 'slug');
+    }
+
+    /**
+     * Check if this is a subclass
+     */
+    public function isSubclass(): bool
+    {
+        return $this->parent_slug !== null;
     }
 
     /**
@@ -163,6 +188,7 @@ class CharacterClass extends Model
             'name' => $this->getTranslation('name', 'ru'),
             'description' => $this->getTranslation('description', 'ru'),
             'slug' => $this->slug,
+            'parent_slug' => $this->parent_slug,
             'hit_die' => $this->hit_die,
             'primary_abilities' => $this->primary_abilities,
             'saving_throws' => $this->saving_throws,
