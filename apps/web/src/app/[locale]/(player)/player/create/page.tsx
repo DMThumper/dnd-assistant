@@ -21,13 +21,16 @@ import { StepRace } from "@/components/player/character-creator/StepRace";
 import { StepClass } from "@/components/player/character-creator/StepClass";
 import { StepAbilities } from "@/components/player/character-creator/StepAbilities";
 import { StepSkills } from "@/components/player/character-creator/StepSkills";
+import { StepSpells } from "@/components/player/character-creator/StepSpells";
 import { StepDetails } from "@/components/player/character-creator/StepDetails";
 
-const STEPS = [
+// Base steps (spells step will be inserted dynamically for spellcasters)
+const BASE_STEPS = [
   { key: "race", label: "Раса" },
   { key: "class", label: "Класс" },
   { key: "abilities", label: "Характеристики" },
   { key: "skills", label: "Навыки" },
+  // spells step inserted here for spellcasters
   { key: "details", label: "Детали" },
 ];
 
@@ -59,9 +62,23 @@ export default function CharacterCreatePage() {
     abilities: DEFAULT_ABILITIES,
     abilityBonusChoices: {},
     skillProficiencies: [],
+    selectedSpells: [],
     name: "",
     backstory: "",
   });
+
+  // Dynamically build steps based on whether class is a spellcaster
+  const isSpellcaster = wizardState.characterClass?.is_spellcaster ?? false;
+  const STEPS = isSpellcaster
+    ? [
+        { key: "race", label: "Раса" },
+        { key: "class", label: "Класс" },
+        { key: "abilities", label: "Характеристики" },
+        { key: "skills", label: "Навыки" },
+        { key: "spells", label: "Заклинания" },
+        { key: "details", label: "Детали" },
+      ]
+    : BASE_STEPS;
 
   useEffect(() => {
     if (!campaignId) {
@@ -92,18 +109,35 @@ export default function CharacterCreatePage() {
   };
 
   const canProceed = (): boolean => {
-    switch (wizardState.step) {
-      case 0: // Race
+    const currentStepKey = STEPS[wizardState.step]?.key;
+
+    switch (currentStepKey) {
+      case "race":
         return wizardState.race !== null;
-      case 1: // Class
+      case "class":
         return wizardState.characterClass !== null;
-      case 2: // Abilities
+      case "abilities":
         return true; // Abilities are always valid (default values)
-      case 3: // Skills
+      case "skills":
         if (!wizardState.characterClass) return false;
         const requiredSkills = wizardState.characterClass.skill_choices;
         return wizardState.skillProficiencies.length >= requiredSkills;
-      case 4: // Details
+      case "spells":
+        if (!wizardState.characterClass) return false;
+        // Check cantrip and spell limits
+        const cantripLimit = wizardState.characterClass.spell_slots?.["1"]?.cantrips ?? 0;
+        const spellLimit = wizardState.characterClass.spells_known?.["1"] ?? 0;
+        const cantrips = creationData?.spells.filter(
+          (s) => s.level === 0 && s.classes.includes(wizardState.characterClass!.slug)
+        ) ?? [];
+        const selectedCantrips = wizardState.selectedSpells.filter((slug) =>
+          cantrips.some((s) => s.slug === slug)
+        );
+        const selectedLeveledSpells = wizardState.selectedSpells.filter((slug) =>
+          !cantrips.some((s) => s.slug === slug)
+        );
+        return selectedCantrips.length >= cantripLimit && selectedLeveledSpells.length >= spellLimit;
+      case "details":
         return wizardState.name.trim().length >= 2;
       default:
         return false;
@@ -156,6 +190,7 @@ export default function CharacterCreatePage() {
         abilities: finalAbilities,
         skill_proficiencies: wizardState.skillProficiencies,
         backstory: wizardState.backstory.trim() || undefined,
+        selected_spells: wizardState.selectedSpells.length > 0 ? wizardState.selectedSpells : undefined,
       });
 
       // Store active character and redirect
@@ -234,7 +269,7 @@ export default function CharacterCreatePage() {
           </div>
         )}
 
-        {wizardState.step === 0 && (
+        {STEPS[wizardState.step]?.key === "race" && (
           <StepRace
             races={creationData.races}
             subraces={creationData.subraces}
@@ -245,17 +280,17 @@ export default function CharacterCreatePage() {
           />
         )}
 
-        {wizardState.step === 1 && (
+        {STEPS[wizardState.step]?.key === "class" && (
           <StepClass
             classes={creationData.classes}
             selectedClass={wizardState.characterClass}
             onSelectClass={(characterClass) =>
-              updateWizardState({ characterClass, skillProficiencies: [] })
+              updateWizardState({ characterClass, skillProficiencies: [], selectedSpells: [] })
             }
           />
         )}
 
-        {wizardState.step === 2 && (
+        {STEPS[wizardState.step]?.key === "abilities" && (
           <StepAbilities
             rules={creationData.rules}
             race={wizardState.subrace || wizardState.race}
@@ -267,7 +302,7 @@ export default function CharacterCreatePage() {
           />
         )}
 
-        {wizardState.step === 3 && wizardState.characterClass && (
+        {STEPS[wizardState.step]?.key === "skills" && wizardState.characterClass && (
           <StepSkills
             rules={creationData.rules}
             characterClass={wizardState.characterClass}
@@ -277,7 +312,16 @@ export default function CharacterCreatePage() {
           />
         )}
 
-        {wizardState.step === 4 && (
+        {STEPS[wizardState.step]?.key === "spells" && wizardState.characterClass && creationData.spells && (
+          <StepSpells
+            spells={creationData.spells}
+            characterClass={wizardState.characterClass}
+            selectedSpells={wizardState.selectedSpells}
+            onSpellsChange={(spells) => updateWizardState({ selectedSpells: spells })}
+          />
+        )}
+
+        {STEPS[wizardState.step]?.key === "details" && (
           <StepDetails
             name={wizardState.name}
             backstory={wizardState.backstory}

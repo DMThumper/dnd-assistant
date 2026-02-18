@@ -78,6 +78,53 @@ export interface SpellSlots {
   };
 }
 
+// Spell components
+export interface SpellComponents {
+  verbal: boolean;
+  somatic: boolean;
+  material: boolean;
+  material_description?: string;
+  material_cost?: string;
+}
+
+// Spell effects
+export interface SpellEffects {
+  damage?: {
+    dice: string;
+    type: string;
+  };
+  save?: {
+    ability: string;
+    on_success?: string;
+  };
+  area?: {
+    shape: string;
+    radius?: string;
+  };
+}
+
+// Spell for character creation
+export interface Spell {
+  id: number;
+  name: string;
+  description: string | null;
+  slug: string;
+  level: number;
+  level_string: string;
+  school: string;
+  casting_time: string;
+  range: string;
+  duration: string;
+  concentration: boolean;
+  ritual: boolean;
+  components: SpellComponents;
+  components_string: string;
+  classes: string[];
+  higher_levels?: { description?: string } | null;
+  effects?: SpellEffects | null;
+  is_cantrip: boolean;
+}
+
 // Character class
 export interface CharacterClass {
   id: number;
@@ -179,6 +226,7 @@ export interface CharacterCreationData {
   races: Race[];
   subraces: { [parentSlug: string]: Race[] };
   classes: CharacterClass[];
+  spells: Spell[];
 }
 
 // Abilities object (character stats)
@@ -199,6 +247,7 @@ export interface CreateCharacterRequest {
   abilities: Abilities;
   skill_proficiencies?: string[];
   backstory?: string;
+  selected_spells?: string[]; // Spell slugs
 }
 
 // Wizard step state
@@ -210,6 +259,7 @@ export interface WizardState {
   abilities: Abilities;
   abilityBonusChoices: { [ability: string]: number };
   skillProficiencies: string[];
+  selectedSpells: string[]; // Spell slugs
   name: string;
   backstory: string;
 }

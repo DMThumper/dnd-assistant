@@ -8,6 +8,7 @@ use App\Models\Campaign;
 use App\Models\Character;
 use App\Models\CharacterClass;
 use App\Models\Race;
+use App\Models\Spell;
 use App\Services\CharacterService;
 use App\Services\LevelUpService;
 use Illuminate\Http\JsonResponse;
@@ -362,6 +363,12 @@ class CharacterController extends Controller
             ->get()
             ->map(fn (CharacterClass $class) => $class->getForSetting($setting));
 
+        // Get spells available in this setting (cantrips and level 1 for starting characters)
+        $spells = $setting->spells()
+            ->whereIn('level', [0, 1])
+            ->get()
+            ->map(fn (Spell $spell) => $spell->getForSetting($setting));
+
         // Get character creation rules from rule system
         $creationRules = $ruleSystem->character_creation ?? [];
         $abilities = $ruleSystem->abilities ?? [];
@@ -394,6 +401,7 @@ class CharacterController extends Controller
                 'races' => $races,
                 'subraces' => $subraces,
                 'classes' => $classes,
+                'spells' => $spells,
             ],
         ]);
     }
@@ -426,6 +434,8 @@ class CharacterController extends Controller
             'abilities.charisma' => 'required|integer|min:1|max:30',
             'skill_proficiencies' => 'sometimes|array',
             'backstory' => 'sometimes|nullable|string|max:5000',
+            'selected_spells' => 'sometimes|array',
+            'selected_spells.*' => 'string|exists:spells,slug',
         ]);
 
         // Get race and class
@@ -508,6 +518,24 @@ class CharacterController extends Controller
             }
         }
 
+        // Build known spells array from selected_spells
+        $knownSpells = [];
+        if (!empty($validated['selected_spells'])) {
+            $selectedSpellSlugs = $validated['selected_spells'];
+            $spells = Spell::whereIn('slug', $selectedSpellSlugs)->get();
+            foreach ($spells as $spell) {
+                $knownSpells[] = [
+                    'slug' => $spell->slug,
+                    'name' => $spell->getTranslation('name', 'ru'),
+                    'level' => $spell->level,
+                    'is_cantrip' => $spell->isCantrip(),
+                ];
+            }
+        }
+
+        // Build prepared spells (for prepared casters, initially all known spells are prepared)
+        $preparedSpells = $knownSpells;
+
         // Create the character
         $character = Character::create([
             'user_id' => $user->id,
@@ -534,6 +562,8 @@ class CharacterController extends Controller
             'features' => $features,
             'class_resources' => [],
             'currency' => ['cp' => 0, 'sp' => 0, 'ep' => 0, 'gp' => 0, 'pp' => 0],
+            'known_spells' => $knownSpells,
+            'prepared_spells' => $preparedSpells,
             'is_alive' => true,
             'stats' => ['sessions_played' => 0],
         ]);

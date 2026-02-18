@@ -73,6 +73,29 @@ class Setting extends Model
     }
 
     /**
+     * Spells available in this setting
+     */
+    public function spells(): BelongsToMany
+    {
+        return $this->belongsToMany(Spell::class, 'setting_spells')
+            ->withPivot('overrides')
+            ->withTimestamps()
+            ->orderBy('level')
+            ->orderBy('name->ru');
+    }
+
+    /**
+     * Feats available in this setting
+     */
+    public function feats(): BelongsToMany
+    {
+        return $this->belongsToMany(Feat::class, 'setting_feats')
+            ->withPivot('overrides')
+            ->withTimestamps()
+            ->orderBy('sort_order');
+    }
+
+    /**
      * Get the rule system's abilities through this setting
      */
     public function getAbilities(): array
