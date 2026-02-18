@@ -53,7 +53,11 @@
       "Bash(__NEW_LINE__ curl -s -X POST \"http://localhost:8000/broadcasting/auth\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/x-www-form-urlencoded\" -H \"Origin: http://localhost:3000\" -d \"channel_name=presence-campaign.1&socket_id=123.456\")",
       "Bash(__NEW_LINE__ curl -s -X POST \"http://localhost:8000/broadcasting/auth\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/x-www-form-urlencoded\" -d \"channel_name=presence-campaign.1&socket_id=123.456\")",
       "Bash(cmd //c \"taskkill /F /IM node.exe 2>nul\")",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git stash drop:*)",
+      "WebFetch(domain:api.open5e.com)",
+      "WebFetch(domain:dnd.su)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
