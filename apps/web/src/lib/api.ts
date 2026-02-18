@@ -524,11 +524,19 @@ class ApiClient {
     action: "add" | "remove",
     condition: Condition
   ) {
+    // Build body with only defined fields
+    const body: Record<string, string | undefined> = {
+      action,
+      key: condition.key,
+    };
+    if (condition.name) body.name = condition.name;
+    if (condition.source) body.source = condition.source;
+
     return this.request<CharacterResponse>(
       `/backoffice/characters/${characterId}/modify-conditions`,
       {
         method: "POST",
-        body: { action, condition },
+        body,
       }
     );
   }

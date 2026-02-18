@@ -16,6 +16,7 @@ import {
   Shield,
 } from "lucide-react";
 import { HpControl } from "./HpControl";
+import { InspirationControl } from "./InspirationControl";
 import { ConditionsControl } from "./ConditionsControl";
 import { CustomRulesControl } from "./CustomRulesControl";
 import { ActionsPanel } from "./ActionsPanel";
@@ -194,6 +195,13 @@ export const CharacterControlPanel = memo(function CharacterControlPanel({
             <div className="p-4 space-y-6">
               {/* HP Control */}
               <HpControl
+                character={character}
+                onCharacterUpdate={onCharacterUpdate}
+                onMarkPendingUpdate={onMarkPendingUpdate}
+              />
+
+              {/* Inspiration Control */}
+              <InspirationControl
                 character={character}
                 onCharacterUpdate={onCharacterUpdate}
                 onMarkPendingUpdate={onMarkPendingUpdate}

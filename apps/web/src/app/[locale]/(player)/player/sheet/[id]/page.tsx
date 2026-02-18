@@ -129,21 +129,6 @@ export default function CharacterSheetPage() {
     }
   };
 
-  const toggleInspiration = async () => {
-    if (!character || isUpdating) return;
-
-    setIsUpdating(true);
-    try {
-      const response = await api.updateCharacter(characterId, {
-        inspiration: !character.inspiration,
-      });
-      setCharacter(response.data.character);
-    } catch (err) {
-      console.error("Failed to toggle inspiration:", err);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -212,15 +197,15 @@ export default function CharacterSheetPage() {
             </Badge>
           </p>
         </div>
-        <Button
-          variant={character.inspiration ? "default" : "outline"}
-          size="icon"
-          onClick={toggleInspiration}
-          disabled={isUpdating}
-          title={t("player.sheet.inspiration")}
-        >
-          <Sparkles className={cn("h-4 w-4", character.inspiration && "text-yellow-300")} />
-        </Button>
+        {/* Inspiration indicator (DM controls this) */}
+        {character.inspiration && (
+          <div
+            className="flex items-center justify-center h-9 w-9 rounded-md bg-amber-500/20 border border-amber-500/50"
+            title={t("player.sheet.inspiration")}
+          >
+            <Sparkles className="h-4 w-4 text-amber-400" />
+          </div>
+        )}
       </div>
 
       {/* XP Progress Section */}
