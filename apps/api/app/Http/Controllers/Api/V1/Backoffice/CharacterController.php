@@ -6,6 +6,8 @@ use App\Events\CharacterUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\Character;
+use App\Models\CharacterClass;
+use App\Models\Race;
 use App\Services\CharacterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -82,16 +84,42 @@ class CharacterController extends Controller
             ->orderByDesc('updated_at')
             ->get();
 
+        // Pre-fetch all races and classes for efficiency
+        $raceSlugs = $characters->pluck('race_slug')->unique()->filter()->toArray();
+        $classSlugs = $characters->pluck('class_slug')->unique()->filter()->toArray();
+
+        $races = Race::whereIn('slug', $raceSlugs)->get()->keyBy('slug');
+        $classes = CharacterClass::whereIn('slug', $classSlugs)->get()->keyBy('slug');
+
         return response()->json([
             'success' => true,
             'data' => [
-                'characters' => $characters->map(function (Character $c) {
+                'characters' => $characters->map(function (Character $c) use ($races, $classes) {
                     $data = $c->formatForApi();
                     $data['owner'] = [
                         'id' => $c->owner->id,
                         'name' => $c->owner->name,
                         'email' => $c->owner->email,
                     ];
+
+                    // Add race info
+                    if ($c->race_slug && isset($races[$c->race_slug])) {
+                        $race = $races[$c->race_slug];
+                        $data['race'] = [
+                            'slug' => $race->slug,
+                            'name' => $race->getTranslation('name', 'ru'),
+                        ];
+                    }
+
+                    // Add class info
+                    if ($c->class_slug && isset($classes[$c->class_slug])) {
+                        $class = $classes[$c->class_slug];
+                        $data['character_class'] = [
+                            'slug' => $class->slug,
+                            'name' => $class->getTranslation('name', 'ru'),
+                        ];
+                    }
+
                     return $data;
                 }),
             ],

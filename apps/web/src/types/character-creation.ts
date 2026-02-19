@@ -93,6 +93,9 @@ export interface SpellEffects {
     dice: string;
     type: string;
   };
+  healing?: {
+    dice: string;
+  };
   save?: {
     ability: string;
     on_success?: string;
@@ -100,6 +103,7 @@ export interface SpellEffects {
   area?: {
     shape: string;
     radius?: string;
+    side?: string;
   };
 }
 

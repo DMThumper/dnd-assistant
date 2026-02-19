@@ -319,6 +319,137 @@ class ApiClient {
     });
   }
 
+  // ===========================================================================
+  // Spellbook (Player spell management)
+  // ===========================================================================
+
+  /**
+   * Get full spellbook for a character
+   * Includes cantrips, known/prepared spells, slots, concentration, stats
+   */
+  async getSpellbook(characterId: number) {
+    return this.request<import("@/types/spell").Spellbook>(
+      `/player/characters/${characterId}/spells`
+    );
+  }
+
+  /**
+   * Get available spells for preparation
+   * Returns all spells the character's class can access at their level
+   */
+  async getAvailableSpells(characterId: number) {
+    return this.request<import("@/types/spell").Spell[]>(
+      `/player/characters/${characterId}/spells/available`
+    );
+  }
+
+  /**
+   * Use a spell slot of the given level
+   */
+  async useSpellSlot(characterId: number, level: number) {
+    return this.request<{ spell_slots_remaining: Record<string, number> }>(
+      `/player/characters/${characterId}/spells/use-slot`,
+      {
+        method: "POST",
+        body: { level },
+      }
+    );
+  }
+
+  /**
+   * Restore spell slot(s) (for Arcane Recovery, etc.)
+   */
+  async restoreSpellSlot(characterId: number, level: number, count: number = 1) {
+    return this.request<{ spell_slots_remaining: Record<string, number> }>(
+      `/player/characters/${characterId}/spells/restore-slot`,
+      {
+        method: "POST",
+        body: { level, count },
+      }
+    );
+  }
+
+  /**
+   * Take a rest (short or long)
+   * Long rest restores all spell slots
+   */
+  async takeRest(characterId: number, type: "short" | "long") {
+    return this.request<{
+      spell_slots_remaining: Record<string, number>;
+      concentration_spell: import("@/types/spell").ConcentrationSpell | null;
+    }>(
+      `/player/characters/${characterId}/spells/rest`,
+      {
+        method: "POST",
+        body: { type },
+      }
+    );
+  }
+
+  /**
+   * Update prepared spells (for prepared casters)
+   */
+  async updatePreparedSpells(characterId: number, preparedSpells: string[]) {
+    return this.request<{ prepared_spells: string[] }>(
+      `/player/characters/${characterId}/spells/prepared`,
+      {
+        method: "PATCH",
+        body: { prepared_spells: preparedSpells },
+      }
+    );
+  }
+
+  /**
+   * Start concentration on a spell
+   */
+  async startConcentration(characterId: number, spellSlug: string) {
+    return this.request<{
+      concentration_spell: import("@/types/spell").ConcentrationSpell;
+    }>(
+      `/player/characters/${characterId}/spells/concentration/start`,
+      {
+        method: "POST",
+        body: { spell_slug: spellSlug },
+      }
+    );
+  }
+
+  /**
+   * End concentration
+   */
+  async endConcentration(characterId: number) {
+    return this.request<{ concentration_spell: null }>(
+      `/player/characters/${characterId}/spells/concentration`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+
+  /**
+   * Get available short rest recovery options
+   * Returns abilities like Natural Recovery, Arcane Recovery, etc.
+   */
+  async getRecoveryOptions(characterId: number) {
+    return this.request<import("@/types/spell").RecoveryOption[]>(
+      `/player/characters/${characterId}/spells/recovery-options`
+    );
+  }
+
+  /**
+   * Use a short rest recovery ability to restore spell slots
+   * @param slots Array of slot levels to restore, e.g. [1, 1, 2] = two 1st level + one 2nd level
+   */
+  async useRecovery(characterId: number, recoveryKey: string, slots: number[]) {
+    return this.request<{
+      spell_slots_remaining: Record<string, number>;
+      short_rest_recovery_used: string[];
+    }>(`/player/characters/${characterId}/spells/use-recovery`, {
+      method: "POST",
+      body: { recovery_key: recoveryKey, slots },
+    });
+  }
+
   // Backoffice endpoints
   async getCampaigns(params?: Record<string, string>) {
     const query = params ? `?${new URLSearchParams(params)}` : "";

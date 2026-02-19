@@ -659,6 +659,8 @@ class CharacterController extends Controller
             'asi.type' => 'required_with:asi|string|in:asi,feat',
             'asi.choices' => 'sometimes|array',
             'subclass' => 'sometimes|string|max:100',
+            'subclass_terrain' => 'sometimes|string|max:50',
+            'subclass_bonus_cantrip' => 'sometimes|string|max:100',
             'features' => 'sometimes|array',
         ]);
 

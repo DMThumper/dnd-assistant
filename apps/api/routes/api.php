@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Backoffice\LiveSessionController;
 use App\Http\Controllers\Api\V1\Display\DisplayController;
 use App\Http\Controllers\Api\V1\Player\CampaignController as PlayerCampaignController;
 use App\Http\Controllers\Api\V1\Player\CharacterController as PlayerCharacterController;
+use App\Http\Controllers\Api\V1\Player\SpellController as PlayerSpellController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -90,9 +91,19 @@ Route::prefix('v1')->group(function () {
             Route::get('characters/{character}/level-up/options', [PlayerCharacterController::class, 'levelUpOptions']);
             Route::post('characters/{character}/level-up', [PlayerCharacterController::class, 'levelUp']);
 
-            // Spells (read-only)
-            // Route::get('spells', [PlayerSpellController::class, 'index']);
-            // Route::get('items', [PlayerItemController::class, 'index']);
+            // Spells (character spellbook management)
+            Route::prefix('characters/{character}/spells')->group(function () {
+                Route::get('/', [PlayerSpellController::class, 'spellbook']);
+                Route::get('available', [PlayerSpellController::class, 'available']);
+                Route::post('use-slot', [PlayerSpellController::class, 'useSlot']);
+                Route::post('restore-slot', [PlayerSpellController::class, 'restoreSlot']);
+                Route::post('rest', [PlayerSpellController::class, 'rest']);
+                Route::patch('prepared', [PlayerSpellController::class, 'updatePrepared']);
+                Route::post('concentration/start', [PlayerSpellController::class, 'startConcentration']);
+                Route::delete('concentration', [PlayerSpellController::class, 'endConcentration']);
+                Route::get('recovery-options', [PlayerSpellController::class, 'recoveryOptions']);
+                Route::post('use-recovery', [PlayerSpellController::class, 'useRecovery']);
+            });
         });
 
         // =====================================================================

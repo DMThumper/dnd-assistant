@@ -38,6 +38,7 @@ class CharacterClass extends Model
         'spells_known',
         'subclass_level',
         'subclass_name',
+        'circle_spells',
         'is_system',
         'sort_order',
     ];
@@ -58,6 +59,7 @@ class CharacterClass extends Model
             'is_spellcaster' => 'boolean',
             'spell_slots' => 'array',
             'spells_known' => 'array',
+            'circle_spells' => 'array',
             'is_system' => 'boolean',
             'sort_order' => 'integer',
         ];

@@ -445,24 +445,44 @@ export default function CharacterSheetPage() {
       )}
 
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <Card className="bg-card/50">
           <CardContent className="p-3 text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground text-sm">
-              <Shield className="h-4 w-4" />
+            <div className="flex items-center justify-center gap-1 text-muted-foreground text-xs">
+              <Shield className="h-3 w-3" />
               <span>{t("player.sheet.ac")}</span>
             </div>
-            <div className="text-2xl font-bold">{character.armor_class ?? 10}</div>
+            <div className="text-xl font-bold">
+              {(character.armor_class ?? 10) + (character.feat_bonuses?.ac ?? 0)}
+              {(character.feat_bonuses?.ac ?? 0) > 0 && (
+                <span className="text-xs text-green-400 ml-0.5">*</span>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card/50">
           <CardContent className="p-3 text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground text-sm">
-              <Zap className="h-4 w-4" />
-              <span>{t("player.sheet.proficiencyBonus")}</span>
+            <div className="flex items-center justify-center gap-1 text-muted-foreground text-xs">
+              <Zap className="h-3 w-3" />
+              <span>Инициатива</span>
             </div>
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-bold">
+              {formatModifier(calculateModifier(character.abilities?.dexterity ?? 10) + (character.feat_bonuses?.initiative ?? 0))}
+              {(character.feat_bonuses?.initiative ?? 0) > 0 && (
+                <span className="text-xs text-green-400 ml-0.5">*</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/50">
+          <CardContent className="p-3 text-center">
+            <div className="flex items-center justify-center gap-1 text-muted-foreground text-xs">
+              <Star className="h-3 w-3" />
+              <span>Мастерство</span>
+            </div>
+            <div className="text-xl font-bold">
               {formatModifier(character.proficiency_bonus ?? 2)}
             </div>
           </CardContent>
@@ -470,11 +490,11 @@ export default function CharacterSheetPage() {
 
         <Card className="bg-card/50">
           <CardContent className="p-3 text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground text-sm">
-              <Footprints className="h-4 w-4" />
+            <div className="flex items-center justify-center gap-1 text-muted-foreground text-xs">
+              <Footprints className="h-3 w-3" />
               <span>{t("player.sheet.speed")}</span>
             </div>
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-bold">
               {character.speed?.walk ?? 9}
               <span className="text-sm text-muted-foreground">м</span>
             </div>
@@ -605,26 +625,49 @@ export default function CharacterSheetPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {(character.class_resources ?? []).map((resource, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div>
-                  <span className="font-medium">{resource.name}</span>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    ({resource.recharge === "short_rest" ? "короткий отдых" : "длинный отдых"})
-                  </span>
+              <div key={index} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium">{resource.name}</span>
+                    {resource.die && (
+                      <span className="text-xs text-primary ml-1">({resource.die})</span>
+                    )}
+                    <span className="text-xs text-muted-foreground ml-2">
+                      ({resource.recharge === "short_rest" ? "КО" : "ДО"})
+                    </span>
+                  </div>
+                  {/* For large resources (>10), show numeric counter */}
+                  {resource.max > 10 ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-primary">
+                        {resource.current}
+                      </span>
+                      <span className="text-muted-foreground">/</span>
+                      <span className="text-muted-foreground">{resource.max}</span>
+                    </div>
+                  ) : (
+                    /* For small resources, show circles */
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: resource.max }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={cn(
+                            "h-4 w-4 rounded-full border-2",
+                            i < resource.current
+                              ? "bg-primary border-primary"
+                              : "border-muted-foreground"
+                          )}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: resource.max }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={cn(
-                        "h-4 w-4 rounded-full border-2",
-                        i < resource.current
-                          ? "bg-primary border-primary"
-                          : "border-muted-foreground"
-                      )}
-                    />
-                  ))}
-                </div>
+                {/* Show use_max info for resources like Balm */}
+                {resource.use_max && resource.max > 10 && (
+                  <div className="text-xs text-muted-foreground">
+                    Макс. за раз: {resource.use_max}{resource.die ? resource.die : ""}
+                  </div>
+                )}
               </div>
             ))}
           </CardContent>
@@ -666,38 +709,83 @@ function SkillsList({ character }: SkillsListProps) {
   const skillProficiencies = character.skill_proficiencies ?? [];
   const skillExpertise = character.skill_expertise ?? [];
   const proficiencyBonus = character.proficiency_bonus ?? 2;
+  const featBonuses = character.feat_bonuses ?? {};
+
+  // Calculate passive perception (10 + perception modifier + feat bonuses)
+  const perceptionMod = calculateModifier(abilities.wisdom ?? 10) +
+    (skillProficiencies.includes("perception") ? proficiencyBonus : 0) +
+    (skillExpertise.includes("perception") ? proficiencyBonus : 0);
+  const passivePerception = 10 + perceptionMod + (featBonuses.passive_perception ?? 0);
+
+  // Calculate passive investigation (10 + investigation modifier + feat bonuses)
+  const investigationMod = calculateModifier(abilities.intelligence ?? 10) +
+    (skillProficiencies.includes("investigation") ? proficiencyBonus : 0) +
+    (skillExpertise.includes("investigation") ? proficiencyBonus : 0);
+  const passiveInvestigation = 10 + investigationMod + (featBonuses.passive_investigation ?? 0);
 
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-      {SKILLS.map((skill) => {
-        const hasProficiency = skillProficiencies.includes(skill.key);
-        const hasExpertise = skillExpertise.includes(skill.key);
-        const abilityMod = calculateModifier(abilities[skill.ability] ?? 10);
-        let totalMod = abilityMod;
-        if (hasProficiency) totalMod += proficiencyBonus;
-        if (hasExpertise) totalMod += proficiencyBonus;
+    <div className="space-y-3">
+      {/* Passive scores */}
+      <div className="flex gap-3 text-sm">
+        <div className="flex items-center gap-1 px-2 py-1 rounded bg-muted/50">
+          <span className="text-muted-foreground">Пасс. внимательность:</span>
+          <span className="font-bold">
+            {passivePerception}
+            {(featBonuses.passive_perception ?? 0) > 0 && (
+              <span className="text-xs text-green-400 ml-0.5">*</span>
+            )}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 px-2 py-1 rounded bg-muted/50">
+          <span className="text-muted-foreground">Пасс. расследование:</span>
+          <span className="font-bold">
+            {passiveInvestigation}
+            {(featBonuses.passive_investigation ?? 0) > 0 && (
+              <span className="text-xs text-green-400 ml-0.5">*</span>
+            )}
+          </span>
+        </div>
+      </div>
 
-        return (
-          <div key={skill.key} className="flex items-center justify-between py-1">
-            <div className="flex items-center gap-1">
-              <span
-                className={cn(
-                  "w-3 h-3 rounded-full border",
-                  hasExpertise
-                    ? "bg-primary border-primary"
-                    : hasProficiency
-                      ? "bg-primary/50 border-primary"
-                      : "border-muted-foreground"
-                )}
-              />
-              <span className={cn(hasProficiency && "font-medium")}>
-                {t(`dnd.skills.${skill.key}`)}
-              </span>
+      {/* Skills grid */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        {SKILLS.map((skill) => {
+          const hasProficiency = skillProficiencies.includes(skill.key);
+          const hasExpertise = skillExpertise.includes(skill.key);
+          const abilityMod = calculateModifier(abilities[skill.ability] ?? 10);
+          let totalMod = abilityMod;
+          if (hasProficiency) totalMod += proficiencyBonus;
+          if (hasExpertise) totalMod += proficiencyBonus;
+
+          return (
+            <div key={skill.key} className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-1">
+                <span
+                  className={cn(
+                    "w-3 h-3 rounded-full border",
+                    hasExpertise
+                      ? "bg-primary border-primary"
+                      : hasProficiency
+                        ? "bg-primary/50 border-primary"
+                        : "border-muted-foreground"
+                  )}
+                />
+                <span className={cn(hasProficiency && "font-medium")}>
+                  {t(`dnd.skills.${skill.key}`)}
+                </span>
+              </div>
+              <span className="font-mono">{formatModifier(totalMod)}</span>
             </div>
-            <span className="font-mono">{formatModifier(totalMod)}</span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      {/* Feat bonus indicator */}
+      {(featBonuses.passive_perception ?? 0) > 0 || (featBonuses.passive_investigation ?? 0) > 0 || (featBonuses.initiative ?? 0) > 0 || (featBonuses.ac ?? 0) > 0 ? (
+        <p className="text-xs text-muted-foreground mt-2">
+          <span className="text-green-400">*</span> — бонус от черт
+        </p>
+      ) : null}
     </div>
   );
 }

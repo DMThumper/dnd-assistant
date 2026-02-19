@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { usePlayerSession } from "@/contexts/PlayerSessionContext";
+import { api } from "@/lib/api";
+import type { Character } from "@/types/game";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,16 +14,53 @@ import { Loader2, Backpack, Coins, Weight } from "lucide-react";
 export default function InventoryPage() {
   const t = useTranslations();
   const router = useRouter();
-  const { character, activeCharacterId, isValidating } = usePlayerSession();
+  const {
+    character: contextCharacter,
+    activeCharacterId,
+    isValidating,
+    setActiveCharacter,
+  } = usePlayerSession();
+
+  // Local state for character if context doesn't have it
+  const [localCharacter, setLocalCharacter] = useState<Character | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Use context character if available, otherwise local
+  const character = contextCharacter || localCharacter;
+
+  // Load character if we have ID but no character data
+  const loadCharacter = useCallback(async () => {
+    if (!activeCharacterId || character) return;
+
+    setIsLoading(true);
+    try {
+      const response = await api.getCharacter(activeCharacterId);
+      if (response.data?.character) {
+        setLocalCharacter(response.data.character);
+        // Also update context
+        setActiveCharacter(activeCharacterId, response.data.character.campaign_id);
+      }
+    } catch (error) {
+      console.error("Failed to load character:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeCharacterId, character, setActiveCharacter]);
+
+  useEffect(() => {
+    if (!isValidating && activeCharacterId && !character) {
+      void loadCharacter();
+    }
+  }, [isValidating, activeCharacterId, character, loadCharacter]);
 
   // Redirect if no active character after validation
   useEffect(() => {
-    if (!isValidating && !activeCharacterId) {
+    if (!isValidating && !isLoading && !activeCharacterId) {
       router.push("/player");
     }
-  }, [isValidating, activeCharacterId, router]);
+  }, [isValidating, isLoading, activeCharacterId, router]);
 
-  if (isValidating) {
+  if (isValidating || isLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -39,7 +78,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 pb-20">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">{t("player.sheet.inventory")}</h1>
         <Badge variant="secondary">{character.name}</Badge>

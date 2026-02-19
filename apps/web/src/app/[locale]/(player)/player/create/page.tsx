@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api, ApiClientError } from "@/lib/api";
@@ -18,21 +18,16 @@ import { Loader2, ChevronLeft, ChevronRight, Check } from "lucide-react";
 
 // Step components
 import { StepRace } from "@/components/player/character-creator/StepRace";
+import { StepSubrace } from "@/components/player/character-creator/StepSubrace";
 import { StepClass } from "@/components/player/character-creator/StepClass";
 import { StepAbilities } from "@/components/player/character-creator/StepAbilities";
 import { StepSkills } from "@/components/player/character-creator/StepSkills";
 import { StepSpells } from "@/components/player/character-creator/StepSpells";
 import { StepDetails } from "@/components/player/character-creator/StepDetails";
 
-// Base steps (spells step will be inserted dynamically for spellcasters)
-const BASE_STEPS = [
-  { key: "race", label: "Раса" },
-  { key: "class", label: "Класс" },
-  { key: "abilities", label: "Характеристики" },
-  { key: "skills", label: "Навыки" },
-  // spells step inserted here for spellcasters
-  { key: "details", label: "Детали" },
-];
+// Steps are built dynamically based on:
+// - Whether selected race has subraces (adds "subrace" step after "race")
+// - Whether selected class is a spellcaster (adds "spells" step before "details")
 
 const DEFAULT_ABILITIES: Abilities = {
   strength: 10,
@@ -67,18 +62,35 @@ export default function CharacterCreatePage() {
     backstory: "",
   });
 
-  // Dynamically build steps based on whether class is a spellcaster
+  // Dynamically build steps based on race (subraces) and class (spellcaster)
   const isSpellcaster = wizardState.characterClass?.is_spellcaster ?? false;
-  const STEPS = isSpellcaster
-    ? [
-        { key: "race", label: "Раса" },
-        { key: "class", label: "Класс" },
-        { key: "abilities", label: "Характеристики" },
-        { key: "skills", label: "Навыки" },
-        { key: "spells", label: "Заклинания" },
-        { key: "details", label: "Детали" },
-      ]
-    : BASE_STEPS;
+  const hasSubraces = wizardState.race && (creationData?.subraces[wizardState.race.slug]?.length ?? 0) > 0;
+
+  const STEPS = useMemo(() => {
+    const steps: { key: string; label: string }[] = [
+      { key: "race", label: "Раса" },
+    ];
+
+    // Add subrace step if selected race has subraces
+    if (hasSubraces) {
+      steps.push({ key: "subrace", label: "Подраса" });
+    }
+
+    steps.push(
+      { key: "class", label: "Класс" },
+      { key: "abilities", label: "Характеристики" },
+      { key: "skills", label: "Навыки" }
+    );
+
+    // Add spells step for spellcasters
+    if (isSpellcaster) {
+      steps.push({ key: "spells", label: "Заклинания" });
+    }
+
+    steps.push({ key: "details", label: "Детали" });
+
+    return steps;
+  }, [hasSubraces, isSpellcaster]);
 
   useEffect(() => {
     if (!campaignId) {
@@ -113,7 +125,12 @@ export default function CharacterCreatePage() {
 
     switch (currentStepKey) {
       case "race":
+        // If race has subraces, just selecting race is enough (subrace will be separate step)
+        // If race has no subraces, selecting race is enough
         return wizardState.race !== null;
+      case "subrace":
+        // Always allow proceeding - user can either select a subrace or keep "Без подрасы" (null)
+        return true;
       case "class":
         return wizardState.characterClass !== null;
       case "abilities":
@@ -128,21 +145,42 @@ export default function CharacterCreatePage() {
           (sk) => !racialSkills.includes(sk)
         );
         return classSkillsSelected.length >= requiredSkills;
-      case "spells":
+      case "spells": {
         if (!wizardState.characterClass) return false;
-        // Check cantrip and spell limits
-        const cantripLimit = wizardState.characterClass.spell_slots?.["1"]?.cantrips ?? 0;
-        const spellLimit = wizardState.characterClass.spells_known?.["1"] ?? 0;
-        const cantrips = creationData?.spells.filter(
+        // Get cantrip limit from progression
+        const cantripLimit = (wizardState.characterClass.progression?.["1"] as Record<string, unknown>)?.cantrips as number ?? 0;
+
+        // Calculate spell limit
+        const isKnownCaster = wizardState.characterClass.spells_known !== null &&
+          wizardState.characterClass.spells_known["1"] !== undefined;
+
+        let spellLimit: number;
+        if (isKnownCaster) {
+          spellLimit = wizardState.characterClass.spells_known!["1"];
+        } else if (wizardState.characterClass.spellcasting_ability) {
+          // Prepared caster: level + ability modifier
+          const abilityKey = wizardState.characterClass.spellcasting_ability as keyof typeof wizardState.abilities;
+          const baseAbility = wizardState.abilities[abilityKey];
+          const bonusFromRace = wizardState.abilityBonusChoices[abilityKey] ?? 0;
+          const totalAbility = baseAbility + bonusFromRace;
+          const modifier = Math.floor((totalAbility - 10) / 2);
+          const level = creationData?.campaign.starting_level ?? 1;
+          spellLimit = Math.max(1, level + modifier);
+        } else {
+          spellLimit = 0;
+        }
+
+        const cantripsSpells = creationData?.spells.filter(
           (s) => s.level === 0 && s.classes.includes(wizardState.characterClass!.slug)
         ) ?? [];
         const selectedCantrips = wizardState.selectedSpells.filter((slug) =>
-          cantrips.some((s) => s.slug === slug)
+          cantripsSpells.some((s) => s.slug === slug)
         );
         const selectedLeveledSpells = wizardState.selectedSpells.filter((slug) =>
-          !cantrips.some((s) => s.slug === slug)
+          !cantripsSpells.some((s) => s.slug === slug)
         );
         return selectedCantrips.length >= cantripLimit && selectedLeveledSpells.length >= spellLimit;
+      }
       case "details":
         return wizardState.name.trim().length >= 2;
       default:
@@ -280,8 +318,15 @@ export default function CharacterCreatePage() {
             races={creationData.races}
             subraces={creationData.subraces}
             selectedRace={wizardState.race}
-            selectedSubrace={wizardState.subrace}
             onSelectRace={(race) => updateWizardState({ race, subrace: null, abilityBonusChoices: {}, skillProficiencies: [] })}
+          />
+        )}
+
+        {STEPS[wizardState.step]?.key === "subrace" && wizardState.race && creationData.subraces[wizardState.race.slug] && (
+          <StepSubrace
+            parentRace={wizardState.race}
+            subraces={creationData.subraces[wizardState.race.slug]}
+            selectedSubrace={wizardState.subrace}
             onSelectSubrace={(subrace) => updateWizardState({ subrace, skillProficiencies: [] })}
           />
         )}
@@ -299,7 +344,8 @@ export default function CharacterCreatePage() {
         {STEPS[wizardState.step]?.key === "abilities" && (
           <StepAbilities
             rules={creationData.rules}
-            race={wizardState.subrace || wizardState.race}
+            race={wizardState.race}
+            subrace={wizardState.subrace}
             method={creationData.campaign.ability_method}
             abilities={wizardState.abilities}
             abilityBonusChoices={wizardState.abilityBonusChoices}
@@ -324,6 +370,9 @@ export default function CharacterCreatePage() {
             characterClass={wizardState.characterClass}
             selectedSpells={wizardState.selectedSpells}
             onSpellsChange={(spells) => updateWizardState({ selectedSpells: spells })}
+            abilities={wizardState.abilities}
+            abilityBonusChoices={wizardState.abilityBonusChoices}
+            level={creationData.campaign.starting_level}
           />
         )}
 

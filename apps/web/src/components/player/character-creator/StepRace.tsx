@@ -10,20 +10,15 @@ interface StepRaceProps {
   races: Race[];
   subraces: { [parentSlug: string]: Race[] };
   selectedRace: Race | null;
-  selectedSubrace: Race | null;
   onSelectRace: (race: Race) => void;
-  onSelectSubrace: (subrace: Race | null) => void;
 }
 
 export function StepRace({
   races,
   subraces,
   selectedRace,
-  selectedSubrace,
   onSelectRace,
-  onSelectSubrace,
 }: StepRaceProps) {
-  const hasSubraces = selectedRace && subraces[selectedRace.slug]?.length > 0;
 
   // Format ability bonuses for display
   const formatBonuses = (race: Race): string => {
@@ -75,10 +70,7 @@ export function StepRace({
                   ? "ring-2 ring-primary bg-primary/5"
                   : "hover:bg-accent/50"
               }`}
-              onClick={() => {
-                onSelectRace(race);
-                onSelectSubrace(null);
-              }}
+              onClick={() => onSelectRace(race)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
@@ -87,6 +79,11 @@ export function StepRace({
                       <h3 className="font-semibold">{race.name}</h3>
                       {isSelected && (
                         <Check className="h-4 w-4 text-primary" />
+                      )}
+                      {raceSubraces.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          {raceSubraces.length} подрас
+                        </Badge>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -98,7 +95,7 @@ export function StepRace({
                   )}
                 </div>
 
-                {/* Race bonuses and traits */}
+                {/* Race stats */}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Badge variant="secondary" className="text-xs">
                     {formatBonuses(race)}
@@ -106,16 +103,21 @@ export function StepRace({
                   <Badge variant="outline" className="text-xs">
                     Скорость {race.speed.walk} м
                   </Badge>
-                  {race.traits.slice(0, 2).map((trait) => (
-                    <Badge key={trait.key} variant="outline" className="text-xs">
-                      {trait.name}
-                    </Badge>
+                </div>
+
+                {/* Race traits with descriptions */}
+                <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    Расовые черты
+                  </div>
+                  {race.traits.map((trait) => (
+                    <div key={trait.key} className="text-sm pl-3 border-l-2 border-amber-500/50">
+                      <span className="font-medium text-amber-500">{trait.name}</span>
+                      <p className="text-muted-foreground mt-0.5">
+                        {trait.description}
+                      </p>
+                    </div>
                   ))}
-                  {race.traits.length > 2 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{race.traits.length - 2}
-                    </Badge>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -123,81 +125,16 @@ export function StepRace({
         })}
       </div>
 
-      {/* Subraces */}
-      {hasSubraces && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-3">
-            Выберите подрасу
-          </h3>
-          <div className="grid gap-3">
-            {subraces[selectedRace.slug].map((subrace) => {
-              const isSelected = selectedSubrace?.slug === subrace.slug;
-
-              return (
-                <Card
-                  key={subrace.slug}
-                  className={`cursor-pointer transition-all ${
-                    isSelected
-                      ? "ring-2 ring-primary bg-primary/5"
-                      : "hover:bg-accent/50"
-                  }`}
-                  onClick={() => onSelectSubrace(subrace)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium">{subrace.name}</h4>
-                      {isSelected && (
-                        <Check className="h-4 w-4 text-primary" />
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {subrace.description}
-                    </p>
-
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {formatBonuses(subrace)}
-                      </Badge>
-                      {subrace.traits.map((trait) => (
-                        <Badge key={trait.key} variant="outline" className="text-xs">
-                          {trait.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Selected race details */}
-      {selectedRace && (
-        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <h3 className="font-semibold mb-3">
-            Черты расы: {(selectedSubrace || selectedRace).name}
-          </h3>
-          <div className="space-y-3">
-            {(selectedSubrace || selectedRace).traits.map((trait) => (
-              <div key={trait.key}>
-                <h4 className="text-sm font-medium">{trait.name}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {trait.description}
-                </p>
-              </div>
-            ))}
-
-            {/* Show parent race traits for subraces */}
-            {selectedSubrace && selectedRace.traits.map((trait) => (
-              <div key={trait.key}>
-                <h4 className="text-sm font-medium">{trait.name}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {trait.description}
-                </p>
-              </div>
-            ))}
-          </div>
+      {/* Selected race indicator */}
+      {selectedRace && subraces[selectedRace.slug]?.length > 0 && (
+        <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+          <p className="text-sm text-center">
+            <span className="font-medium text-primary">{selectedRace.name}</span>
+            {" — "}
+            <span className="text-muted-foreground">
+              на следующем шаге выберите подрасу
+            </span>
+          </p>
         </div>
       )}
     </div>

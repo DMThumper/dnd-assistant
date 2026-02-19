@@ -22,6 +22,7 @@ import {
   Swords,
   FileText,
   Clock,
+  UserCog,
 } from "lucide-react";
 
 const statusConfig = {
@@ -127,6 +128,13 @@ export default function CampaignPage() {
       title: "Центр управления",
       description: "Управление персонажами в реальном времени",
       color: "text-emerald-500",
+    },
+    {
+      href: `/dashboard/campaign/${slug}/characters`,
+      icon: UserCog,
+      title: "Персонажи",
+      description: `${campaign.characters_count} персонажей в кампании`,
+      color: "text-purple-500",
     },
     {
       href: `/dashboard/campaign/${slug}/acts`,
