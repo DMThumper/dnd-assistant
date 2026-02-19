@@ -60,7 +60,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(TOKEN=\"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIwMTljNzBmNi0yZmRhLTcyNzAtYTQ0Yy1hNzAxNjI2OThmMzAiLCJqdGkiOiI1YTc4NDA3OGUzYjE1M2FhZjExZTAyOGFmYjI2YTRjMzg2YjBjYWZiN2Q0MDBhYTQ2ZDU1N2RmMzM3ZmIwY2YxNGUyNmE3YzgwM2Y0MTk1NSIsImlhdCI6MTc3MTQyMzUxOC45ODMzMTUsIm5iZiI6MTc3MTQyMzUxOC45ODMzMTcsImV4cCI6MTgwMjk1OTUxOC45NzI1MzgsInN1YiI6IjEiLCJzY29wZXMiOltdfQ.aQTFA3-hJQnHeCCf_yjHFnvQxmRV7PKcwwHiGD4jo3QlIptEEhDZnYf0Vxq80aaOF6JpzCJPFNYZg0xY-3RqEks9sGIMWelP9TOaeIXT9GCLknM9j2Ozb-zcmQafWAtO-l8XUtPJsyGt2KUEgopQ4XpY9hhlyS39YBDT8om3xbZHtUGvixEhOIVw9SXs5XmVLQec4KWNBAzkn8rXW3HYID1hkbOkPakvglYFxJLhiqMar-rb2dQo4Ta5eoBm3cQ-s0XbAMZa-BM30WCcZRBP071YGv2cLFpdvKPvzV1EyII3MEeMT3BhpsgJwwJ_mdxxn-KMd8SkuTxdqq-16CIv2W1nSolNH4nh-VK-tqGIWV74WBK-IvfEOUBc1Ae8zWnoE_TVDLe1i0JvhQ4fBKSQqxYRggrC31YEWpycMhgib0HST8QlFRhWbqShOVbA_PgpQsXDYzXUcR3hIcemzRnUnclUnq4Ib53mrMRdtLaT1VLkSrxXgykpsiIi0nLpiWa4Hurn-MYbjeJg8VX-2nq3-r6FTHxlz18X5vMh6esVJObqH6ElD6ico9REKwn1Oa9xByajJ72Kpob63jPj6rw61BBI4Ssq0k9RzcS-wdjQJrh3xiFZffujItLK0kYWon-8GNevjD5IlluhqT3T0VqX9qHoXtZkoxf1SUwx3IwT6sE\")",
       "Bash(__NEW_LINE_7f6d0da56fc10d1c__ curl -s http://localhost:8000/api/v1/player/characters/8 -H \"Authorization: Bearer $TOKEN\" -H \"Accept: application/json\")",
-      "Bash(npx shadcn@latest add:*)"
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(git push:*)"
     ]
   }
 }

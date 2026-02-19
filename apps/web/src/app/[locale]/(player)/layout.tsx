@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PlayerSessionProvider, usePlayerSession } from "@/contexts/PlayerSessionContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import { cn } from "@/lib/utils";
-import { Loader2, Swords, Sparkles, BookOpen, Backpack, LogOut, Radio, WifiOff, Wifi } from "lucide-react";
+import { Loader2, Swords, Sparkles, BookOpen, Backpack, LogOut, Radio, WifiOff, Wifi, Ghost } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +59,13 @@ function PlayerLayoutInner({ children }: { children: ReactNode }) {
   const sheetHref = activeCharacterId ? `/player/sheet/${activeCharacterId}` : "/player/sheet";
   const featuresHref = activeCharacterId ? `/player/sheet/${activeCharacterId}/features` : "/player/features";
 
+  // Check if character has summons or can summon (druids, wizards, etc.)
+  const hasSummons = character?.summoned_creatures && character.summoned_creatures.length > 0;
+
+  // Classes that can summon creatures (Wild Shape, Find Familiar, etc.)
+  const summonerClasses = ["druid", "wizard", "warlock", "ranger"];
+  const canSummon = character?.class_slug && summonerClasses.includes(character.class_slug);
+
   const navItems: NavItem[] = [
     {
       href: sheetHref,
@@ -78,6 +85,13 @@ function PlayerLayoutInner({ children }: { children: ReactNode }) {
       icon: <BookOpen className="h-5 w-5" />,
       match: /\/player\/spells/,
     },
+    // Show summons tab if character has summons OR can summon (druids, wizards, etc.)
+    ...((hasSummons || canSummon) ? [{
+      href: "/player/summons",
+      label: "Призыв",
+      icon: <Ghost className="h-5 w-5" />,
+      match: /\/player\/summons/,
+    }] : []),
     {
       href: "/player/inventory",
       label: t("player.nav.inventory"),
@@ -108,7 +122,8 @@ function PlayerLayoutInner({ children }: { children: ReactNode }) {
   const showBottomNav = pathname.includes("/player/sheet") ||
                         pathname.includes("/player/spells") ||
                         pathname.includes("/player/inventory") ||
-                        pathname.includes("/player/features");
+                        pathname.includes("/player/features") ||
+                        pathname.includes("/player/summons");
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

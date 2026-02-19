@@ -329,6 +329,7 @@ export interface Character {
   asi_choices: AsiChoice[];
   feat_bonuses: FeatBonuses;
   player_notes: string;
+  summoned_creatures: import("@/types/summon").SummonedCreature[];
   created_at: string;
   updated_at: string;
 }

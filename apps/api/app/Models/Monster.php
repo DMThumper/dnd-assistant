@@ -42,6 +42,9 @@ class Monster extends Model
         'lair_actions',
         'regional_effects',
         'is_system',
+        'is_common',
+        'has_swim',
+        'has_fly',
         'sort_order',
     ];
 
@@ -65,6 +68,9 @@ class Monster extends Model
             'regional_effects' => 'array',
             'challenge_rating' => 'decimal:2',
             'is_system' => 'boolean',
+            'is_common' => 'boolean',
+            'has_swim' => 'boolean',
+            'has_fly' => 'boolean',
             'sort_order' => 'integer',
         ];
     }
@@ -198,6 +204,9 @@ class Monster extends Model
             'has_legendary_actions' => $this->hasLegendaryActions(),
             'has_lair_actions' => $this->hasLairActions(),
             'is_system' => $this->is_system,
+            'is_common' => $this->is_common,
+            'has_swim' => $this->has_swim,
+            'has_fly' => $this->has_fly,
             'sort_order' => $this->sort_order,
         ];
     }

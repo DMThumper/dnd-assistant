@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\Display\DisplayController;
 use App\Http\Controllers\Api\V1\Player\CampaignController as PlayerCampaignController;
 use App\Http\Controllers\Api\V1\Player\CharacterController as PlayerCharacterController;
 use App\Http\Controllers\Api\V1\Player\SpellController as PlayerSpellController;
+use App\Http\Controllers\Api\V1\Player\SummonController as PlayerSummonController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -103,6 +104,15 @@ Route::prefix('v1')->group(function () {
                 Route::delete('concentration', [PlayerSpellController::class, 'endConcentration']);
                 Route::get('recovery-options', [PlayerSpellController::class, 'recoveryOptions']);
                 Route::post('use-recovery', [PlayerSpellController::class, 'useRecovery']);
+            });
+
+            // Summons (familiars, spirits, conjured creatures)
+            Route::prefix('characters/{character}/summons')->group(function () {
+                Route::get('/', [PlayerSummonController::class, 'index']);
+                Route::get('available', [PlayerSummonController::class, 'available']);
+                Route::post('/', [PlayerSummonController::class, 'store']);
+                Route::patch('{summonId}', [PlayerSummonController::class, 'update']);
+                Route::delete('{summonId}', [PlayerSummonController::class, 'destroy']);
             });
         });
 

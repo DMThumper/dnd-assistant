@@ -58,6 +58,7 @@ class Character extends Model
         'asi_choices',
         'feat_bonuses',
         'player_notes',
+        'summoned_creatures',
     ];
 
     protected function casts(): array
@@ -94,6 +95,7 @@ class Character extends Model
             'subclasses' => 'array',
             'asi_choices' => 'array',
             'feat_bonuses' => 'array',
+            'summoned_creatures' => 'array',
         ];
     }
 
@@ -249,6 +251,7 @@ class Character extends Model
             'asi_choices' => $this->asi_choices ?? [],
             'feat_bonuses' => $this->feat_bonuses ?? [],
             'player_notes' => $this->player_notes ?? '',
+            'summoned_creatures' => $this->summoned_creatures ?? [],
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

@@ -450,6 +450,68 @@ class ApiClient {
     });
   }
 
+  // ===========================================================================
+  // Summons (Player summon management)
+  // ===========================================================================
+
+  /**
+   * Get all summoned creatures for a character
+   */
+  async getSummons(characterId: number) {
+    return this.request<{ summons: import("@/types/summon").SummonedCreature[] }>(
+      `/player/characters/${characterId}/summons`
+    );
+  }
+
+  /**
+   * Get available monsters for summoning (beasts for Wild Shape, etc.)
+   */
+  async getAvailableMonsters(characterId: number, type: string = "beast", maxCr?: number) {
+    const params = new URLSearchParams({ type });
+    if (maxCr !== undefined) params.append("max_cr", maxCr.toString());
+    return this.request<{ monsters: import("@/types/summon").Monster[] }>(
+      `/player/characters/${characterId}/summons/available?${params}`
+    );
+  }
+
+  /**
+   * Summon a creature
+   */
+  async summonCreature(characterId: number, data: import("@/types/summon").SummonCreatureRequest) {
+    return this.request<{ summon: import("@/types/summon").SummonedCreature }>(
+      `/player/characters/${characterId}/summons`,
+      {
+        method: "POST",
+        body: data,
+      }
+    );
+  }
+
+  /**
+   * Update a summoned creature (HP, conditions, etc.)
+   */
+  async updateSummon(characterId: number, summonId: string, data: import("@/types/summon").UpdateSummonRequest) {
+    return this.request<{ message: string }>(
+      `/player/characters/${characterId}/summons/${summonId}`,
+      {
+        method: "PATCH",
+        body: data,
+      }
+    );
+  }
+
+  /**
+   * Dismiss a summoned creature
+   */
+  async dismissSummon(characterId: number, summonId: string) {
+    return this.request<{ message: string }>(
+      `/player/characters/${characterId}/summons/${summonId}`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+
   // Backoffice endpoints
   async getCampaigns(params?: Record<string, string>) {
     const query = params ? `?${new URLSearchParams(params)}` : "";

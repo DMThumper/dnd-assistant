@@ -109,6 +109,9 @@ export default function CharacterSheetPage() {
 
       // Set active character in context - this triggers WebSocket subscriptions
       setActiveCharacter(characterId, fetchedCharacter.campaign_id);
+
+      // Also update character in context so layout can access class_slug etc.
+      updateCharacter(fetchedCharacter);
     } catch (err) {
       if (err instanceof ApiClientError) {
         setError(err.message);
@@ -118,7 +121,7 @@ export default function CharacterSheetPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [characterId, t, setActiveCharacter]);
+  }, [characterId, t, setActiveCharacter, updateCharacter]);
 
   useEffect(() => {
     void fetchCharacter();
