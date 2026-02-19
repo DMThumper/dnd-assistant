@@ -71,7 +71,20 @@ class SummonController extends Controller
             'custom_stats' => 'sometimes|array',
             'source_spell' => 'sometimes|nullable|string|max:100',
             'duration' => 'sometimes|nullable|string|max:50',
+            'uses_wild_shape' => 'sometimes|boolean',
         ]);
+
+        // Check if this summon uses Wild Shape charges (e.g., Wildfire Spirit)
+        if (!empty($validated['uses_wild_shape']) && $character->class_slug === 'druid') {
+            $charges = $character->wild_shape_charges ?? 2;
+            if ($charges <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Нет доступных использований Дикого облика',
+                ], 422);
+            }
+            $character->wild_shape_charges = $charges - 1;
+        }
 
         // If monster_id provided, get monster stats
         $monster = null;
@@ -98,7 +111,14 @@ class SummonController extends Controller
         $summons = $character->summoned_creatures ?? [];
         $summons[] = $summon;
 
-        $character->update(['summoned_creatures' => $summons]);
+        $updateData = ['summoned_creatures' => $summons];
+
+        // Save wild_shape_charges if it was modified
+        if (!empty($validated['uses_wild_shape']) && $character->class_slug === 'druid') {
+            $updateData['wild_shape_charges'] = $character->wild_shape_charges;
+        }
+
+        $character->update($updateData);
 
         // Broadcast to DM
         broadcast(new CharacterUpdated($character->fresh(), 'summon_added', [

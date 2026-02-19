@@ -330,8 +330,46 @@ export interface Character {
   feat_bonuses: FeatBonuses;
   player_notes: string;
   summoned_creatures: import("@/types/summon").SummonedCreature[];
+  wild_shape_charges: number;
+  wild_shape_form: WildShapeForm | null;
   created_at: string;
   updated_at: string;
+}
+
+// Wild Shape trait
+export interface WildShapeTrait {
+  name: string;
+  description: string;
+}
+
+// Wild Shape action
+export interface WildShapeAction {
+  name: string;
+  type?: string;
+  description?: string;
+  attack_bonus?: number;
+  reach?: string;
+  range?: string;
+  damage?: string;
+  damage_type?: string;
+}
+
+// Wild Shape form (when druid is transformed into a beast)
+export interface WildShapeForm {
+  beast_slug: string;
+  beast_name: string;
+  monster_id: number;
+  max_hp: number;
+  current_hp: number;
+  temp_hp: number;
+  armor_class: number;
+  speed: Speed;
+  abilities: Abilities;
+  traits?: WildShapeTrait[];
+  actions?: WildShapeAction[];
+  senses?: Record<string, string | number>;
+  skills?: Record<string, number>;
+  transformed_at: string;
 }
 
 // API Response types

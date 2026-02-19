@@ -375,8 +375,18 @@ class ApiClient {
    */
   async takeRest(characterId: number, type: "short" | "long") {
     return this.request<{
-      spell_slots_remaining: Record<string, number>;
-      concentration_spell: import("@/types/spell").ConcentrationSpell | null;
+      character: Character;
+      restored: Record<string, unknown>;
+      duration: {
+        hours: number;
+        label: string;
+        reason?: string;
+      };
+      messages: Array<{
+        type: string;
+        text: string;
+        options?: unknown[];
+      }>;
     }>(
       `/player/characters/${characterId}/spells/rest`,
       {
@@ -510,6 +520,97 @@ class ApiClient {
         method: "DELETE",
       }
     );
+  }
+
+  // ===========================================================================
+  // Wild Shape (Druid transformation)
+  // ===========================================================================
+
+  /**
+   * Get Wild Shape status (charges, current form, limits)
+   */
+  async getWildShapeStatus(characterId: number) {
+    return this.request<{
+      charges: number;
+      max_charges: number;
+      current_form: import("@/types/game").WildShapeForm | null;
+      limits: {
+        max_cr: number;
+        can_swim: boolean;
+        can_fly: boolean;
+        duration_hours: number;
+        is_moon_druid: boolean;
+      };
+    }>(`/player/characters/${characterId}/wild-shape`);
+  }
+
+  /**
+   * Get available beasts for Wild Shape transformation
+   */
+  async getWildShapeBeasts(characterId: number) {
+    return this.request<{
+      beasts: import("@/types/summon").Monster[];
+      limits: {
+        max_cr: number;
+        can_swim: boolean;
+        can_fly: boolean;
+        duration_hours: number;
+        is_moon_druid: boolean;
+      };
+    }>(`/player/characters/${characterId}/wild-shape/beasts`);
+  }
+
+  /**
+   * Transform into a beast
+   */
+  async wildShapeTransform(characterId: number, monsterId: number) {
+    return this.request<{
+      character: import("@/types/game").Character;
+      beast: import("@/types/summon").Monster;
+      message: string;
+    }>(`/player/characters/${characterId}/wild-shape/transform`, {
+      method: "POST",
+      body: { monster_id: monsterId },
+    });
+  }
+
+  /**
+   * Take damage in beast form
+   */
+  async wildShapeDamage(characterId: number, amount: number) {
+    return this.request<{
+      character: import("@/types/game").Character;
+      reverted?: boolean;
+      excess_damage?: number;
+      message?: string;
+    }>(`/player/characters/${characterId}/wild-shape/damage`, {
+      method: "POST",
+      body: { amount },
+    });
+  }
+
+  /**
+   * Heal in beast form
+   */
+  async wildShapeHeal(characterId: number, amount: number) {
+    return this.request<{
+      character: import("@/types/game").Character;
+    }>(`/player/characters/${characterId}/wild-shape/heal`, {
+      method: "POST",
+      body: { amount },
+    });
+  }
+
+  /**
+   * Revert from beast form voluntarily
+   */
+  async wildShapeRevert(characterId: number) {
+    return this.request<{
+      character: import("@/types/game").Character;
+      message: string;
+    }>(`/player/characters/${characterId}/wild-shape/revert`, {
+      method: "POST",
+    });
   }
 
   // Backoffice endpoints

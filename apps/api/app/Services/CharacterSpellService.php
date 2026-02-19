@@ -324,69 +324,265 @@ class CharacterSpellService
     }
 
     /**
-     * Take a rest and restore spell slots
-     * Short rest: class-specific recovery (Wizard Arcane Recovery, etc.)
-     * Long rest: restore all slots
+     * Take a rest and restore resources
+     *
+     * Short rest (1 hour):
+     * - Class resources that recharge on short rest
+     * - Wild Shape charges (druids)
+     * - Hit Dice can be spent (manual)
+     *
+     * Long rest (8 hours, or 4 for elves with Trance):
+     * - All HP restored
+     * - Half of max Hit Dice restored
+     * - All spell slots restored
+     * - All class resources restored
+     * - Wild Shape charges restored (druids)
+     * - Concentration cleared
+     * - Death saves reset
+     * - Short rest recovery abilities reset
+     * - Summoned creatures dismissed
+     *
+     * @return array{character: Character, restored: array, duration: array, messages: array}
      */
-    public function takeRest(Character $character, string $type): Character
+    public function takeRest(Character $character, string $type): array
     {
         $characterClass = CharacterClass::where('slug', $character->class_slug)->first();
+        $restored = [];
+        $messages = [];
+
+        // Calculate rest duration based on race
+        $duration = $this->getRestDuration($character, $type);
+
+        // Wild Shape charges restore on both short and long rest (for druids)
+        if ($character->class_slug === 'druid') {
+            $oldCharges = $character->wild_shape_charges ?? 0;
+            $character->wild_shape_charges = 2;
+            if ($oldCharges < 2) {
+                $restored['wild_shape_charges'] = ['from' => $oldCharges, 'to' => 2];
+            }
+        }
 
         if ($type === 'long') {
+            // Restore HP to maximum
+            $oldHp = $character->current_hp;
+            if ($oldHp < $character->max_hp) {
+                $character->current_hp = $character->max_hp;
+                $character->temp_hp = 0; // Temp HP is lost after long rest
+                $restored['hp'] = ['from' => $oldHp, 'to' => $character->max_hp];
+            }
+
+            // Restore Hit Dice (half of max, minimum 1)
+            $hitDiceRemaining = $character->hit_dice_remaining ?? [];
+            $level = $character->level;
+            $hitDie = $characterClass?->hit_die ?? 'd8';
+            $maxHitDice = $level;
+            $currentHitDice = $hitDiceRemaining[$hitDie] ?? $maxHitDice;
+            $toRestore = max(1, (int) floor($maxHitDice / 2));
+            $newHitDice = min($maxHitDice, $currentHitDice + $toRestore);
+
+            if ($newHitDice > $currentHitDice) {
+                $hitDiceRemaining[$hitDie] = $newHitDice;
+                $character->hit_dice_remaining = $hitDiceRemaining;
+                $restored['hit_dice'] = [
+                    'die' => $hitDie,
+                    'from' => $currentHitDice,
+                    'to' => $newHitDice,
+                    'max' => $maxHitDice,
+                ];
+            }
+
             // Long rest: restore all spell slots (for spellcasters)
             if ($characterClass && $characterClass->is_spellcaster) {
                 $classSlots = $characterClass->getSpellSlotsAtLevel($character->level);
-                $restored = [];
+                $oldSlots = $character->spell_slots_remaining ?? [];
+                $newSlots = [];
 
                 foreach ($classSlots as $key => $max) {
                     if ($key === 'cantrips') continue;
                     $level = preg_replace('/[^0-9]/', '', $key);
                     if (!empty($level)) {
-                        $restored[$level] = $max;
+                        $newSlots[$level] = $max;
                     }
                 }
 
-                $character->spell_slots_remaining = $restored;
+                if ($oldSlots != $newSlots) {
+                    $character->spell_slots_remaining = $newSlots;
+                    $restored['spell_slots'] = ['from' => $oldSlots, 'to' => $newSlots];
+                }
             }
 
             // Clear concentration on long rest (new day)
-            $character->concentration_spell = null;
+            if ($character->concentration_spell) {
+                $restored['concentration_cleared'] = $character->concentration_spell['spell_name'] ?? true;
+                $character->concentration_spell = null;
+            }
+
+            // Reset death saves
+            if ($character->death_saves && (
+                ($character->death_saves['successes'] ?? 0) > 0 ||
+                ($character->death_saves['failures'] ?? 0) > 0
+            )) {
+                $character->death_saves = ['successes' => 0, 'failures' => 0];
+                $restored['death_saves'] = true;
+            }
+
+            // Clear summoned creatures
+            if (!empty($character->summoned_creatures)) {
+                $restored['summoned_creatures_dismissed'] = count($character->summoned_creatures);
+                $character->summoned_creatures = [];
+            }
 
             // Reset short rest recovery abilities on long rest
-            $character->short_rest_recovery_used = [];
+            if (!empty($character->short_rest_recovery_used)) {
+                $restored['short_rest_abilities_reset'] = $character->short_rest_recovery_used;
+                $character->short_rest_recovery_used = [];
+            }
 
             // Restore class resources that recharge on long rest
-            $this->restoreClassResources($character, 'long_rest');
+            $resourcesRestored = $this->restoreClassResources($character, 'long_rest');
+            if (!empty($resourcesRestored)) {
+                $restored['class_resources'] = $resourcesRestored;
+            }
         } elseif ($type === 'short') {
             // Restore class resources that recharge on short rest
-            $this->restoreClassResources($character, 'short_rest');
+            $resourcesRestored = $this->restoreClassResources($character, 'short_rest');
+            if (!empty($resourcesRestored)) {
+                $restored['class_resources'] = $resourcesRestored;
+            }
+
+            // Check for short rest recovery abilities (Arcane Recovery, Natural Recovery)
+            $recoveryOptions = $this->getShortRestRecoveryOptions($character);
+            $availableRecovery = array_filter($recoveryOptions, fn($opt) => $opt['available']);
+            if (!empty($availableRecovery)) {
+                $messages[] = [
+                    'type' => 'recovery_available',
+                    'text' => 'Доступно восстановление ячеек заклинаний',
+                    'options' => array_values($availableRecovery),
+                ];
+            }
+
+            // Remind about Hit Dice usage
+            $hitDiceRemaining = $character->hit_dice_remaining ?? [];
+            $hitDie = $characterClass?->hit_die ?? 'd8';
+            $currentHitDice = $hitDiceRemaining[$hitDie] ?? $character->level;
+            if ($currentHitDice > 0 && $character->current_hp < $character->max_hp) {
+                $messages[] = [
+                    'type' => 'hit_dice_available',
+                    'text' => "Можно потратить Кости Хитов ({$currentHitDice}{$hitDie}) для исцеления",
+                ];
+            }
         }
 
         $character->save();
+        $character->refresh(); // Ensure we have fresh data from database
 
         broadcast(new CharacterUpdated($character, 'rest', [
             'type' => $type,
-            'spell_slots_remaining' => $character->spell_slots_remaining,
-            'class_resources' => $character->class_resources,
+            'duration' => $duration,
+            'restored' => $restored,
         ]));
 
-        return $character;
+        return [
+            'character' => $character,
+            'restored' => $restored,
+            'duration' => $duration,
+            'messages' => $messages,
+        ];
+    }
+
+    /**
+     * Get rest duration based on race traits
+     */
+    private function getRestDuration(Character $character, string $type): array
+    {
+        $raceSlug = $character->race_slug;
+
+        // Check for Trance (elves) - affects long rest only
+        $hasTrance = $this->characterHasTrait($character, 'trance');
+
+        // Check for Sentry's Rest (warforged) - 6 hours long rest
+        $hasSentryRest = $this->characterHasTrait($character, 'sentry_rest');
+
+        if ($type === 'short') {
+            return [
+                'hours' => 1,
+                'label' => '1 час',
+            ];
+        }
+
+        // Long rest duration
+        if ($hasTrance) {
+            return [
+                'hours' => 4,
+                'label' => '4 часа',
+                'reason' => 'Транс',
+            ];
+        }
+
+        if ($hasSentryRest) {
+            return [
+                'hours' => 6,
+                'label' => '6 часов',
+                'reason' => 'Часовой отдых',
+            ];
+        }
+
+        return [
+            'hours' => 8,
+            'label' => '8 часов',
+        ];
+    }
+
+    /**
+     * Check if character has a specific trait (from race or subrace)
+     */
+    private function characterHasTrait(Character $character, string $traitKey): bool
+    {
+        // Check race traits
+        $race = \App\Models\Race::where('slug', $character->race_slug)->first();
+        if ($race) {
+            $traits = $race->traits ?? [];
+            foreach ($traits as $trait) {
+                if (($trait['key'] ?? '') === $traitKey) {
+                    return true;
+                }
+            }
+
+            // Check parent race traits (for subraces)
+            if ($race->parent_slug) {
+                $parentRace = \App\Models\Race::where('slug', $race->parent_slug)->first();
+                if ($parentRace) {
+                    $parentTraits = $parentRace->traits ?? [];
+                    foreach ($parentTraits as $trait) {
+                        if (($trait['key'] ?? '') === $traitKey) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
      * Restore class resources based on rest type
+     * @return array List of restored resources with from/to values
      */
-    private function restoreClassResources(Character $character, string $rechargeType): void
+    private function restoreClassResources(Character $character, string $rechargeType): array
     {
         $classResources = $character->class_resources ?? [];
         $level = $character->level;
         $proficiencyBonus = $character->getProficiencyBonus();
+        $restored = [];
 
         foreach ($classResources as &$resource) {
             $resourceRecharge = $resource['recharge'] ?? 'long_rest';
 
             // Long rest restores everything, short rest only restores short_rest resources
             if ($rechargeType === 'long_rest' || $resourceRecharge === $rechargeType) {
+                $oldValue = $resource['current'] ?? 0;
+
                 // Recalculate max in case level changed
                 if (isset($resource['max_formula'])) {
                     $resource['max'] = $this->evaluateResourceFormula(
@@ -402,11 +598,22 @@ class CharacterSpellService
                         );
                     }
                 }
+
                 $resource['current'] = $resource['max'];
+
+                if ($oldValue < $resource['max']) {
+                    $restored[] = [
+                        'name' => $resource['name'] ?? 'Ресурс',
+                        'from' => $oldValue,
+                        'to' => $resource['max'],
+                    ];
+                }
             }
         }
 
         $character->class_resources = $classResources;
+
+        return $restored;
     }
 
     /**

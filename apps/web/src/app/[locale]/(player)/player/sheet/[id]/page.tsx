@@ -13,7 +13,6 @@ import { Separator } from "@/components/ui/separator";
 import {
   Loader2,
   ChevronLeft,
-  ChevronRight,
   Shield,
   Heart,
   Plus,
@@ -29,11 +28,14 @@ import {
   Edit3,
   Check,
   X,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { usePlayerSession } from "@/contexts/PlayerSessionContext";
 import { toast } from "sonner";
+import { WildShapeButton, WildShapeOverlay } from "@/components/player/wild-shape";
 
 // XP thresholds for D&D 5e levels
 const XP_THRESHOLDS: Record<number, number> = {
@@ -69,6 +71,26 @@ const ABILITIES = [
   "charisma",
 ] as const;
 
+// Races with special rest mechanics
+const TRANCE_RACES = ["elf", "high-elf", "wood-elf", "drow", "half-elf"];
+const SENTRY_REST_RACES = ["warforged"];
+
+function getRestDuration(raceSlug: string | null | undefined, type: "short" | "long"): { hours: number; label: string; reason?: string } {
+  if (type === "short") {
+    return { hours: 1, label: "1 час" };
+  }
+
+  if (raceSlug && TRANCE_RACES.includes(raceSlug)) {
+    return { hours: 4, label: "4 часа", reason: "Транс" };
+  }
+
+  if (raceSlug && SENTRY_REST_RACES.includes(raceSlug)) {
+    return { hours: 6, label: "6 часов", reason: "Часовой отдых" };
+  }
+
+  return { hours: 8, label: "8 часов" };
+}
+
 // Active character is now managed by PlayerSessionContext
 
 type AbilityKey = (typeof ABILITIES)[number];
@@ -96,6 +118,9 @@ export default function CharacterSheetPage() {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  // Rest state
+  const [isResting, setIsResting] = useState<"short" | "long" | null>(null);
 
   // Use context character if available, otherwise use local state
   const character = contextCharacter || localCharacter;
@@ -171,6 +196,41 @@ export default function CharacterSheetPage() {
     }
   };
 
+  const takeRest = async (type: "short" | "long") => {
+    if (!character || isResting) return;
+
+    setIsResting(type);
+    try {
+      const response = await api.takeRest(characterId, type);
+      // Use the returned character directly
+      setCharacter(response.data.character);
+
+      // Show success message with duration (with fallback for old API)
+      const duration = response.data.duration;
+      const durationInfo = duration
+        ? (duration.reason ? `${duration.label} (${duration.reason})` : duration.label)
+        : (type === "long" ? "8 часов" : "1 час");
+      toast.success(
+        type === "long"
+          ? `Продолжительный отдых завершён — ${durationInfo}`
+          : `Короткий отдых завершён — ${durationInfo}`
+      );
+
+      // Show additional messages (recovery options, etc.)
+      for (const msg of response.data.messages ?? []) {
+        if (msg.type === "recovery_available") {
+          toast.info(msg.text, { duration: 5000 });
+        } else if (msg.type === "hit_dice_available") {
+          toast.info(msg.text, { duration: 4000 });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to rest:", err);
+      toast.error("Не удалось завершить отдых");
+    } finally {
+      setIsResting(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -373,6 +433,20 @@ export default function CharacterSheetPage() {
         </CardContent>
       </Card>
 
+      {/* Wild Shape Overlay (when in beast form) */}
+      {character.wild_shape_form && (
+        <WildShapeOverlay
+          character={character}
+          wildShapeForm={character.wild_shape_form}
+          onUpdate={setCharacter}
+        />
+      )}
+
+      {/* Wild Shape Button (for druids not in beast form) */}
+      {character.class_slug === "druid" && !character.wild_shape_form && (
+        <WildShapeButton character={character} onTransform={setCharacter} />
+      )}
+
       {/* Conditions (if any) */}
       {character.conditions && character.conditions.length > 0 && (
         <Card className="bg-orange-500/10 border-orange-500/30">
@@ -550,6 +624,62 @@ export default function CharacterSheetPage() {
           <SkillsList character={character} />
         </CardContent>
       </Card>
+
+      {/* Rest Section */}
+      {(() => {
+        const shortRestDuration = getRestDuration(character.race_slug, "short");
+        const longRestDuration = getRestDuration(character.race_slug, "long");
+        return (
+          <Card className="bg-indigo-500/10 border-indigo-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2 text-indigo-300">
+                <Moon className="h-5 w-5" />
+                Отдых
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => takeRest("short")}
+                  disabled={isResting !== null}
+                  className="h-auto py-3 flex-col gap-1 border-indigo-500/30 hover:bg-indigo-500/10"
+                >
+                  {isResting === "short" ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Sun className="h-5 w-5 text-amber-400" />
+                  )}
+                  <span className="font-medium">Короткий</span>
+                  <span className="text-xs text-muted-foreground">{shortRestDuration.label}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => takeRest("long")}
+                  disabled={isResting !== null}
+                  className="h-auto py-3 flex-col gap-1 border-indigo-500/30 hover:bg-indigo-500/10"
+                >
+                  {isResting === "long" ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Moon className="h-5 w-5 text-indigo-400" />
+                  )}
+                  <span className="font-medium">Длительный</span>
+                  <span className="text-xs text-muted-foreground">
+                    {longRestDuration.label}
+                    {longRestDuration.reason && (
+                      <span className="text-indigo-400 ml-1">({longRestDuration.reason})</span>
+                    )}
+                  </span>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                КО: ресурсы класса, Дикий облик | ДО: HP, Кости Хитов, ячейки, ресурсы
+              </p>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Player Notes (editable) */}
       <Card className="bg-blue-500/10 border-blue-500/30">

@@ -205,17 +205,22 @@ class SpellController extends Controller
         ]);
 
         try {
-            $character = $this->spellService->takeRest($character, $validated['type']);
+            $result = $this->spellService->takeRest($character, $validated['type']);
+
+            $durationLabel = $result['duration']['label'] ?? ($validated['type'] === 'long' ? '8 часов' : '1 час');
+            $reason = isset($result['duration']['reason']) ? " ({$result['duration']['reason']})" : '';
 
             $message = $validated['type'] === 'long'
-                ? 'Продолжительный отдых завершён. Ячейки заклинаний восстановлены.'
-                : 'Короткий отдых завершён.';
+                ? "Продолжительный отдых завершён ({$durationLabel}{$reason})"
+                : "Короткий отдых завершён ({$durationLabel})";
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'spell_slots_remaining' => $character->spell_slots_remaining,
-                    'concentration_spell' => $character->concentration_spell,
+                    'character' => $result['character']->formatForApi(),
+                    'restored' => $result['restored'],
+                    'duration' => $result['duration'],
+                    'messages' => $result['messages'],
                 ],
                 'message' => $message,
             ]);

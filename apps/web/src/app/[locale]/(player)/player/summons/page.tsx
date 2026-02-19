@@ -71,6 +71,7 @@ interface QuickSummonTemplate {
   type: SummonType;
   icon: React.ReactNode;
   description: string;
+  usesWildShape?: boolean; // If true, deducts Wild Shape charge
   getStats: (level: number, proficiencyBonus: number) => {
     max_hp: number;
     ac: number;
@@ -89,6 +90,7 @@ const SUBCLASS_SUMMONS: Record<string, QuickSummonTemplate[]> = {
       type: "spirit",
       icon: <Flame className="h-5 w-5 text-orange-500" />,
       description: "Призывается действием, тратя использование Дикого облика",
+      usesWildShape: true,
       getStats: (level, pb) => ({
         max_hp: 5 + 5 * level,
         ac: 13,
@@ -301,7 +303,7 @@ export default function SummonsPage() {
 
   // Handle quick summon
   const handleQuickSummon = async (template: QuickSummonTemplate) => {
-    if (!activeCharacterId) return;
+    if (!activeCharacterId || !character) return;
 
     const stats = template.getStats(character.level, proficiencyBonus);
 
@@ -311,15 +313,32 @@ export default function SummonsPage() {
       return;
     }
 
+    // Check Wild Shape charges if needed
+    if (template.usesWildShape) {
+      const charges = character.wild_shape_charges ?? 2;
+      if (charges <= 0) {
+        // Show error toast or message
+        return;
+      }
+    }
+
     try {
       const response = await api.summonCreature(activeCharacterId, {
         name: template.name,
         type: template.type,
         max_hp: stats.max_hp,
         source_spell: "Дикий облик",
+        uses_wild_shape: template.usesWildShape,
       });
       if (response.data?.summon) {
         setSummons((prev) => [...prev, response.data.summon]);
+        // Refresh character to update wild_shape_charges
+        if (template.usesWildShape) {
+          const charResponse = await api.getCharacter(activeCharacterId);
+          if (charResponse.data?.character) {
+            setLocalCharacter(charResponse.data.character);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to summon:", error);
@@ -340,6 +359,8 @@ export default function SummonsPage() {
           {quickSummons.map((template) => {
             const stats = template.getStats(character.level, proficiencyBonus);
             const isStarryForm = stats.max_hp === 0;
+            const wildShapeCharges = character.wild_shape_charges ?? 2;
+            const canSummon = !template.usesWildShape || wildShapeCharges > 0;
 
             return (
               <Card key={template.key} className="border-primary/30">
@@ -354,6 +375,11 @@ export default function SummonsPage() {
                         <Badge variant="outline" className={cn("text-xs", SUMMON_TYPE_COLORS[template.type])}>
                           {SUMMON_TYPE_LABELS[template.type]}
                         </Badge>
+                        {template.usesWildShape && (
+                          <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
+                            Дикий облик: {wildShapeCharges}/2
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {template.description}
@@ -385,9 +411,10 @@ export default function SummonsPage() {
                           size="sm"
                           className="mt-2"
                           onClick={() => handleQuickSummon(template)}
+                          disabled={!canSummon}
                         >
                           <Flame className="h-3 w-3 mr-1" />
-                          Призвать
+                          {canSummon ? "Призвать" : "Нет зарядов"}
                         </Button>
                       )}
                     </div>

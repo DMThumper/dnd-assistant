@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Player\CampaignController as PlayerCampaignContr
 use App\Http\Controllers\Api\V1\Player\CharacterController as PlayerCharacterController;
 use App\Http\Controllers\Api\V1\Player\SpellController as PlayerSpellController;
 use App\Http\Controllers\Api\V1\Player\SummonController as PlayerSummonController;
+use App\Http\Controllers\Api\V1\Player\WildShapeController as PlayerWildShapeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -113,6 +114,16 @@ Route::prefix('v1')->group(function () {
                 Route::post('/', [PlayerSummonController::class, 'store']);
                 Route::patch('{summonId}', [PlayerSummonController::class, 'update']);
                 Route::delete('{summonId}', [PlayerSummonController::class, 'destroy']);
+            });
+
+            // Wild Shape (druid transformation)
+            Route::prefix('characters/{character}/wild-shape')->group(function () {
+                Route::get('/', [PlayerWildShapeController::class, 'status']);
+                Route::get('beasts', [PlayerWildShapeController::class, 'availableBeasts']);
+                Route::post('transform', [PlayerWildShapeController::class, 'transform']);
+                Route::post('damage', [PlayerWildShapeController::class, 'damage']);
+                Route::post('heal', [PlayerWildShapeController::class, 'heal']);
+                Route::post('revert', [PlayerWildShapeController::class, 'revert']);
             });
         });
 

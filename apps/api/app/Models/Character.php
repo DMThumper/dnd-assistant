@@ -59,6 +59,8 @@ class Character extends Model
         'feat_bonuses',
         'player_notes',
         'summoned_creatures',
+        'wild_shape_charges',
+        'wild_shape_form',
     ];
 
     protected function casts(): array
@@ -96,6 +98,8 @@ class Character extends Model
             'asi_choices' => 'array',
             'feat_bonuses' => 'array',
             'summoned_creatures' => 'array',
+            'wild_shape_charges' => 'integer',
+            'wild_shape_form' => 'array',
         ];
     }
 
@@ -252,6 +256,8 @@ class Character extends Model
             'feat_bonuses' => $this->feat_bonuses ?? [],
             'player_notes' => $this->player_notes ?? '',
             'summoned_creatures' => $this->summoned_creatures ?? [],
+            'wild_shape_charges' => $this->wild_shape_charges ?? 2,
+            'wild_shape_form' => $this->wild_shape_form,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

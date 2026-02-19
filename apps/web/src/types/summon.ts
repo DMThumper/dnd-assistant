@@ -92,6 +92,7 @@ export interface SummonCreatureRequest {
   custom_stats?: Record<string, unknown>;
   source_spell?: string;
   duration?: string;
+  uses_wild_shape?: boolean; // If true, deducts a Wild Shape charge
 }
 
 // Request to update a summoned creature

@@ -760,8 +760,11 @@ class LevelUpService
                 $query = \App\Models\Spell::where('level', 0);
 
                 // Filter by attack roll requirement if needed
+                // Attack roll cantrips have damage but no save in effects
                 if ($attackRollRequired) {
-                    $query->where('attack_type', '!=', null);
+                    $query->whereNotNull('effects')
+                          ->whereJsonContainsKey('effects->damage')
+                          ->whereNull('effects->save');
                 }
 
                 $availableCantrips = $query

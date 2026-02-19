@@ -20,9 +20,28 @@ interface SpellBookProps {
   characterId: number;
   isActive: boolean;
   hasLiveSession: boolean;
+  raceSlug?: string | null;
+  onCharacterUpdate?: (character: unknown) => void;
 }
 
-export function SpellBook({ characterId, isActive, hasLiveSession }: SpellBookProps) {
+// Race-based rest duration
+const TRANCE_RACES = ["elf", "high-elf", "wood-elf", "drow", "half-elf"];
+const SENTRY_REST_RACES = ["warforged"];
+
+function getRestDuration(raceSlug: string | null | undefined, type: "short" | "long"): { label: string; reason?: string } {
+  if (type === "short") {
+    return { label: "1 ч" };
+  }
+  if (raceSlug && TRANCE_RACES.includes(raceSlug)) {
+    return { label: "4 ч", reason: "Транс" };
+  }
+  if (raceSlug && SENTRY_REST_RACES.includes(raceSlug)) {
+    return { label: "6 ч", reason: "Часовой" };
+  }
+  return { label: "8 ч" };
+}
+
+export function SpellBook({ characterId, isActive, hasLiveSession, raceSlug, onCharacterUpdate }: SpellBookProps) {
   const [spellbook, setSpellbook] = useState<Spellbook | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -141,35 +160,37 @@ export function SpellBook({ characterId, isActive, hasLiveSession }: SpellBookPr
     try {
       const response = await api.takeRest(characterId, type);
 
-      // Update spell slots from response
-      setSpellbook((prev) => {
-        if (!prev) return null;
+      // Update parent character state if callback provided
+      if (onCharacterUpdate && response.data.character) {
+        onCharacterUpdate(response.data.character);
+      }
 
-        const newSlots = { ...prev.spell_slots };
-        for (const [level, remaining] of Object.entries(response.data.spell_slots_remaining)) {
-          if (newSlots[level]) {
-            newSlots[level] = {
-              ...newSlots[level],
-              remaining: remaining as number,
-            };
-          }
-        }
+      // Refetch spellbook to get updated spell slots
+      await loadSpellbook();
 
-        return {
-          ...prev,
-          spell_slots: newSlots,
-          concentration_spell: response.data.concentration_spell,
-        };
-      });
+      // Show success message with duration (with fallback for old API)
+      const duration = response.data.duration;
+      const durationInfo = duration
+        ? (duration.reason ? `${duration.label} (${duration.reason})` : duration.label)
+        : (type === "long" ? "8 часов" : "1 час");
 
       if (type === "long") {
-        toast.success("Продолжительный отдых завершён. Ячейки восстановлены!");
+        toast.success(`Продолжительный отдых завершён — ${durationInfo}. Ячейки восстановлены!`);
         // Open prepare spells dialog for prepared casters after long rest
         if (spellbook?.is_prepared_caster) {
           setShowPrepareDialog(true);
         }
       } else {
-        toast.success("Короткий отдых завершён");
+        toast.success(`Короткий отдых завершён — ${durationInfo}`);
+      }
+
+      // Show additional messages
+      for (const msg of response.data.messages ?? []) {
+        if (msg.type === "recovery_available") {
+          toast.info(msg.text, { duration: 5000 });
+        } else if (msg.type === "hit_dice_available") {
+          toast.info(msg.text, { duration: 4000 });
+        }
       }
     } catch (err) {
       if (err instanceof ApiClientError) {
@@ -370,30 +391,39 @@ export function SpellBook({ characterId, isActive, hasLiveSession }: SpellBookPr
       )}
 
       {/* Rest Buttons */}
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          className="flex-1"
-          onClick={() => handleRest("short")}
-          disabled={isResting || !canModify}
-        >
-          <Sun className="h-4 w-4 mr-2" />
-          Короткий отдых
-        </Button>
-        <Button
-          variant="outline"
-          className="flex-1"
-          onClick={() => handleRest("long")}
-          disabled={isResting || !canModify}
-        >
-          {isResting ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Moon className="h-4 w-4 mr-2" />
-          )}
-          Длинный отдых
-        </Button>
-      </div>
+      {(() => {
+        const shortRest = getRestDuration(raceSlug, "short");
+        const longRest = getRestDuration(raceSlug, "long");
+        return (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => handleRest("short")}
+              disabled={isResting || !canModify}
+            >
+              <Sun className="h-4 w-4 mr-2 text-amber-400" />
+              <span className="truncate">Короткий ({shortRest.label})</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => handleRest("long")}
+              disabled={isResting || !canModify}
+            >
+              {isResting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Moon className="h-4 w-4 mr-2 text-indigo-400" />
+              )}
+              <span className="truncate">
+                Длинный ({longRest.label})
+                {longRest.reason && <span className="text-xs ml-1 opacity-70">{longRest.reason}</span>}
+              </span>
+            </Button>
+          </div>
+        );
+      })()}
 
       {/* Prepare Spells Dialog */}
       {spellbook.is_prepared_caster && (

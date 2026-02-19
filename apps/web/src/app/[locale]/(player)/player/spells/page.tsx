@@ -19,6 +19,7 @@ export default function SpellsPage() {
     isValidating,
     liveSession,
     setActiveCharacter,
+    updateCharacter,
   } = usePlayerSession();
 
   // Local state for character if context doesn't have it
@@ -27,6 +28,7 @@ export default function SpellsPage() {
 
   // Use context character if available, otherwise local
   const character = contextCharacter || localCharacter;
+  const setCharacter = contextCharacter ? updateCharacter : setLocalCharacter;
 
   // Load character if we have ID but no character data
   const loadCharacter = useCallback(async () => {
@@ -37,7 +39,6 @@ export default function SpellsPage() {
       const response = await api.getCharacter(activeCharacterId);
       if (response.data?.character) {
         setLocalCharacter(response.data.character);
-        // Also update context
         setActiveCharacter(activeCharacterId, response.data.character.campaign_id);
       }
     } catch (error) {
@@ -59,6 +60,11 @@ export default function SpellsPage() {
       router.push("/player");
     }
   }, [isValidating, isLoading, activeCharacterId, router]);
+
+  // Handle character update from SpellBook (after rest)
+  const handleCharacterUpdate = useCallback((updatedCharacter: unknown) => {
+    setCharacter(updatedCharacter as Character);
+  }, [setCharacter]);
 
   if (isValidating || isLoading) {
     return (
@@ -88,6 +94,8 @@ export default function SpellsPage() {
         characterId={character.id}
         isActive={character.is_active}
         hasLiveSession={!!liveSession}
+        raceSlug={character.race_slug}
+        onCharacterUpdate={handleCharacterUpdate}
       />
     </div>
   );
