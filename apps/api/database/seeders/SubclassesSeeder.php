@@ -12,9 +12,9 @@ class SubclassesSeeder extends Seeder
     {
         $eberron = Setting::where('slug', 'eberron')->first();
 
-        $this->seedDruidCircles($eberron);
+        // Note: Druid circles moved to DruidClassSeeder
+        // Note: Rogue archetypes moved to RogueClassSeeder
         $this->seedRangerArchetypes($eberron);
-        $this->seedRogueArchetypes($eberron);
         $this->seedWizardSchools($eberron);
         $this->seedArtificer($eberron);
     }

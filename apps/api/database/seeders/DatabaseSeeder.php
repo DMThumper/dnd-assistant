@@ -16,6 +16,10 @@ class DatabaseSeeder extends Seeder
             SettingsSeeder::class,
             RacesSeeder::class,
             ClassesSeeder::class,
+            // Individual class seeders with complete data + subclasses
+            DruidClassSeeder::class,
+            MonkClassSeeder::class,
+            RogueClassSeeder::class,
             MonstersSeeder::class,
             SpellsSeeder::class,
             FeatsSeeder::class,
