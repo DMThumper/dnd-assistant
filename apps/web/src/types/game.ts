@@ -91,11 +91,17 @@ export interface Currency {
   pp: number;
 }
 
-// Class resource (Ki, Rage, etc.)
+// Class resource (Ki, Rage, Balm dice, etc.)
 export interface ClassResource {
+  key?: string;
   name: string;
+  source?: string;
   current: number;
   max: number;
+  max_formula?: string;
+  die?: string;  // e.g., "d6" for Balm of Summer Court
+  use_max?: number;  // Max per use (e.g., half druid level for Balm)
+  use_max_formula?: string;
   recharge: "short_rest" | "long_rest";
 }
 
@@ -128,6 +134,74 @@ export interface CharacterStats {
   potions_used?: number;
   gold_earned?: number;
   gold_spent?: number;
+}
+
+// Concentration spell (active spell requiring concentration)
+export interface ConcentrationSpell {
+  spell_slug: string;
+  spell_name: string;
+  started_at: string;
+  duration: string;
+}
+
+// Known spell entry (can be string slug or full object)
+export interface KnownSpellEntry {
+  slug: string;
+  name: string;
+  level: number;
+  is_cantrip?: boolean;
+  source?: string;
+}
+
+// Union type for known_spells array elements
+export type KnownSpellItem = string | KnownSpellEntry;
+
+// Spell components for display
+export interface SpellComponents {
+  verbal: boolean;
+  somatic: boolean;
+  material: boolean;
+  material_description?: string;
+  material_cost?: number;
+  material_consumed?: boolean;
+}
+
+// Spell effects for display
+export interface SpellEffects {
+  damage?: {
+    dice: string;
+    type: string;
+  };
+  healing?: {
+    dice: string;
+  };
+  save?: {
+    ability: string;
+    on_success?: string;
+  };
+  area?: {
+    shape: string;
+    radius?: string;
+    size?: string;
+    length?: string;
+    width?: string;
+    height?: string;
+  };
+}
+
+// Spell preview for feat selection (cantrip/spell choice)
+export interface SpellPreview {
+  slug: string;
+  name: string;
+  level?: number;
+  classes?: string[];
+  school?: string;
+  casting_time?: string;
+  range?: string;
+  duration?: string;
+  components?: SpellComponents;
+  effects?: SpellEffects | null;
+  description?: string;
 }
 
 // D&D Condition (standard conditions like poisoned, stunned)
@@ -196,6 +270,18 @@ export interface AsiChoice {
   feat?: string; // For feat: slug
 }
 
+// Feat bonuses stored on character (from feats like Alert, Tough, etc.)
+export interface FeatBonuses {
+  initiative?: number; // Alert: +5
+  ac?: number; // Dual Wielder: +1
+  speed?: number; // Mobile: +3
+  passive_perception?: number; // Observant: +5
+  passive_investigation?: number; // Observant: +5
+  hp_per_level?: number; // Tough: +2 per level
+  luck_points?: number; // Lucky feat
+  sorcery_points?: number; // Metamagic Adept
+}
+
 // Character
 export interface Character {
   id: number;
@@ -234,11 +320,14 @@ export interface Character {
   inventory: InventoryItem[];
   equipment: Equipment;
   prepared_spells: string[];
-  known_spells: string[];
+  known_spells: KnownSpellItem[];
+  always_prepared_spells: string[];
   spell_slots_remaining: Record<string, number>;
+  concentration_spell: ConcentrationSpell | null;
   class_levels: Record<string, number>;
   subclasses: Record<string, string>;
   asi_choices: AsiChoice[];
+  feat_bonuses: FeatBonuses;
   player_notes: string;
   created_at: string;
   updated_at: string;
@@ -349,9 +438,35 @@ export interface KillCharacterRequest {
   last_words?: string;
 }
 
+// Character owner (player who owns the character)
+export interface CharacterOwner {
+  id: number;
+  name: string;
+  email: string;
+}
+
+// Race info (for display)
+export interface RaceInfo {
+  slug: string;
+  name: string;
+}
+
+// Class info (for display)
+export interface ClassInfo {
+  slug: string;
+  name: string;
+}
+
+// Character with relations (for DM backoffice views)
+export interface CharacterWithRelations extends Character {
+  owner?: CharacterOwner;
+  race?: RaceInfo;
+  character_class?: ClassInfo;
+}
+
 // Campaign characters list response (for backoffice)
 export interface CampaignCharactersResponse {
-  characters: Character[];
+  characters: CharacterWithRelations[];
   campaign: {
     id: number;
     name: string;
@@ -604,12 +719,83 @@ export interface LevelUpAsiOptions {
   abilities: AsiAbilityOption[];
 }
 
+// Feat option for level up
+export interface LevelUpFeatOption {
+  slug: string;
+  name: string;
+  description: string;
+  prerequisites?: Record<string, unknown>;
+  benefits?: FeatBenefits;
+  repeatable?: boolean;
+  available: boolean;
+  already_taken: boolean;
+  meets_prerequisites: boolean;
+  failed_prerequisites?: string[];
+  // Available cantrips for feats that grant cantrip choice
+  available_cantrips?: SpellPreview[];
+  // Available spells for feats that grant spell choice
+  available_spells?: SpellPreview[];
+}
+
+// Feat benefits structure
+export interface FeatBenefits {
+  ability_increase?: {
+    ability?: string;
+    options?: string[];
+    amount: number;
+    choice?: boolean;
+  };
+  ac_bonus?: number;
+  initiative_bonus?: number;
+  speed_bonus?: number;
+  hp_per_level?: number;
+  skill_proficiency?: number;
+  skill_expertise?: number;
+  saving_throw_proficiency?: { choice: boolean } | string;
+  proficiency_choices?: number;
+  cantrips?: number;
+  cantrip?: { choice: boolean; attack_roll_required?: boolean };
+  spells?: string[];
+  spell?: { choice: boolean; level?: number; school?: string };
+  spell_1st_level?: number;
+  spell_choice?: { level: number; schools: string[] };
+  languages?: number;
+  luck_points?: number;
+  sorcery_points?: number;
+  passive_bonus?: number;
+  features?: Array<{ name: string; description: string }>;
+}
+
 // Class feature from level up
 export interface LevelUpFeature {
   name: string;
   description: string;
-  type?: "feature" | "choice" | "subclass" | "asi";
+  short_description?: string;
+  type?: "feature" | "choice" | "subclass" | "asi" | "resource";
   options?: string[];
+  // Resource fields (for type === "resource")
+  resource_key?: string;
+  resource_name?: string;
+  resource_die?: string;
+  resource_max_formula?: string;
+  resource_use_max_formula?: string;
+  recharge?: "short_rest" | "long_rest";
+}
+
+// Subclass choice options (terrain, bonus cantrip, etc.)
+export interface SubclassChoices {
+  terrain?: {
+    required: boolean;
+    feature_name: string;
+    options: Array<{ key: string; name: string; spells?: string[] }>;
+  };
+  bonus_cantrip?: {
+    required: boolean;
+    feature_name: string;
+    from_class: string;
+    count: number;
+    available_cantrips?: Array<{ slug: string; name: string }>;
+  };
 }
 
 // Subclass option
@@ -617,11 +803,9 @@ export interface SubclassOption {
   slug: string;
   name: string;
   description?: string;
-  level_features?: Record<string, Array<{
-    name: string;
-    description: string;
-    type?: string;
-  }>>;
+  level_features?: Record<string, LevelUpFeature[]>;
+  choices?: SubclassChoices;
+  has_circle_spells?: boolean;
 }
 
 // Level up options response
@@ -637,7 +821,7 @@ export interface LevelUpOptionsResponse {
   asi_options?: {
     asi: LevelUpAsiOptions;
     feats_enabled: boolean;
-    feats?: Array<{ slug: string; name: string; description: string }>;
+    feats?: LevelUpFeatOption[];
   };
   features: LevelUpFeature[];
   // Subclass selection (e.g., Rogue archetype at level 3)
@@ -646,14 +830,28 @@ export interface LevelUpOptionsResponse {
   subclass_options?: SubclassOption[];
 }
 
+// Feat choices for feats that require additional decisions
+export interface FeatChoicesPayload {
+  feat: string;
+  ability_increase?: string; // chosen ability for +1
+  saving_throw_proficiency?: string; // for Resilient
+  skill_proficiencies?: string[]; // for Skill Expert, Skilled
+  skill_expertise?: string[]; // for Skill Expert
+  languages?: string[]; // for Linguist
+  cantrip?: string; // for Magic Initiate
+  spell?: string; // for Magic Initiate, Ritual Caster
+}
+
 // Level up choices (request body)
 export interface LevelUpChoices {
   class?: string;
   hp_roll?: number;
   asi?: {
     type: "asi" | "feat";
-    choices?: Record<string, number> | { feat: string };
+    choices?: Record<string, number> | FeatChoicesPayload;
   };
   subclass?: string;
+  subclass_terrain?: string;
+  subclass_bonus_cantrip?: string;
   features?: LevelUpFeature[];
 }

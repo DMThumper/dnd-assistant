@@ -15,7 +15,8 @@ import { Minus, Plus, Dices } from "lucide-react";
 
 interface StepAbilitiesProps {
   rules: RulesInfo;
-  race: Race | null;
+  race: Race | null;           // Parent race (e.g. Elf)
+  subrace: Race | null;        // Subrace if selected (e.g. Drow)
   method: "point_buy" | "standard_array" | "roll";
   abilities: Abilities;
   abilityBonusChoices: { [ability: string]: number };
@@ -28,12 +29,15 @@ type AbilityKey = keyof Abilities;
 export function StepAbilities({
   rules,
   race,
+  subrace,
   method,
   abilities,
   abilityBonusChoices,
   onAbilitiesChange,
   onBonusChoicesChange,
 }: StepAbilitiesProps) {
+  // Effective race for display (subrace name if selected, else race name)
+  const effectiveRace = subrace || race;
   const [standardArrayAssigned, setStandardArrayAssigned] = useState<{ [key: string]: number }>({});
   const [rolledValues, setRolledValues] = useState<number[]>([]);
 
@@ -46,16 +50,62 @@ export function StepAbilities({
     "charisma",
   ];
 
-  // Get racial bonus for an ability
+  // Get racial bonus for an ability (sum of parent race + subrace bonuses)
   const getRacialBonus = (ability: AbilityKey): number => {
-    if (!race) return 0;
-    const fixed = race.ability_bonuses[ability];
-    if (typeof fixed === "number") return fixed;
-    return abilityBonusChoices[ability] || 0;
+    let bonus = 0;
+
+    // Add parent race bonus
+    if (race) {
+      const raceBonus = race.ability_bonuses[ability];
+      if (typeof raceBonus === "number") {
+        bonus += raceBonus;
+      }
+    }
+
+    // Add subrace bonus (if different from parent race)
+    if (subrace) {
+      const subraceBonus = subrace.ability_bonuses[ability];
+      if (typeof subraceBonus === "number") {
+        bonus += subraceBonus;
+      }
+    }
+
+    // Add flexible bonus choices
+    bonus += abilityBonusChoices[ability] || 0;
+
+    return bonus;
   };
 
-  // Check if race has flexible bonus choices
-  const hasFlexibleBonus = race?.ability_bonuses.choice;
+  // Get bonus source description
+  const getBonusSource = (ability: AbilityKey): string[] => {
+    const sources: string[] = [];
+
+    if (race) {
+      const raceBonus = race.ability_bonuses[ability];
+      if (typeof raceBonus === "number" && raceBonus !== 0) {
+        sources.push(`+${raceBonus} ${race.name}`);
+      }
+    }
+
+    if (subrace) {
+      const subraceBonus = subrace.ability_bonuses[ability];
+      if (typeof subraceBonus === "number" && subraceBonus !== 0) {
+        sources.push(`+${subraceBonus} ${subrace.name}`);
+      }
+    }
+
+    const flexBonus = abilityBonusChoices[ability];
+    if (flexBonus) {
+      sources.push(`+${flexBonus} выбор`);
+    }
+
+    return sources;
+  };
+
+  // Check if race or subrace has flexible bonus choices
+  const raceFlexibleBonus = race?.ability_bonuses.choice;
+  const subraceFlexibleBonus = subrace?.ability_bonuses.choice;
+  const hasFlexibleBonus = subraceFlexibleBonus || raceFlexibleBonus;
   const flexibleBonusCount = hasFlexibleBonus?.count || 0;
   const flexibleBonusAmount = hasFlexibleBonus?.amount || 0;
   const excludedAbilities = hasFlexibleBonus?.exclude || [];
@@ -157,6 +207,50 @@ export function StepAbilities({
     onBonusChoicesChange(newChoices);
   };
 
+  // Random point buy distribution
+  const randomizePointBuy = () => {
+    const budget = rules.creation.point_buy_budget;
+    const minScore = rules.creation.point_buy_min;
+    const maxScore = rules.creation.point_buy_max;
+
+    // Start with minimum values
+    const newAbilities: Abilities = {
+      strength: minScore,
+      dexterity: minScore,
+      constitution: minScore,
+      intelligence: minScore,
+      wisdom: minScore,
+      charisma: minScore,
+    };
+
+    let remaining = budget - calculatePointsSpent(newAbilities);
+    const keys = [...abilityKeys];
+
+    // Randomly distribute points
+    while (remaining > 0) {
+      // Shuffle abilities
+      keys.sort(() => Math.random() - 0.5);
+
+      let madeProgress = false;
+      for (const ability of keys) {
+        const current = newAbilities[ability];
+        if (current >= maxScore) continue;
+
+        const nextCost = (POINT_BUY_COSTS[current + 1] ?? 99) - (POINT_BUY_COSTS[current] ?? 0);
+        if (nextCost <= remaining) {
+          newAbilities[ability] = current + 1;
+          remaining -= nextCost;
+          madeProgress = true;
+          break;
+        }
+      }
+
+      if (!madeProgress) break;
+    }
+
+    onAbilitiesChange(newAbilities);
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -190,7 +284,7 @@ export function StepAbilities({
       {hasFlexibleBonus && (
         <div className="p-3 bg-primary/10 rounded-lg">
           <p className="text-sm">
-            <strong>{race?.name}:</strong> Выберите {flexibleBonusCount} характеристик
+            <strong>{effectiveRace?.name}:</strong> Выберите {flexibleBonusCount} характеристик
             для бонуса +{flexibleBonusAmount}
             {chosenBonusCount < flexibleBonusCount && (
               <span className="text-primary ml-2">
@@ -289,7 +383,7 @@ export function StepAbilities({
                   {/* Racial bonus indicator */}
                   {racialBonus !== 0 && (
                     <div className="text-xs text-primary mt-1">
-                      +{racialBonus} {race?.name}
+                      {getBonusSource(ability).join(", ")}
                     </div>
                   )}
                 </div>
@@ -302,7 +396,18 @@ export function StepAbilities({
       {/* Point buy cost reference */}
       {method === "point_buy" && (
         <div className="text-xs text-muted-foreground">
-          <p className="font-medium mb-1">Стоимость очков:</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="font-medium">Стоимость очков:</p>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={randomizePointBuy}
+            >
+              <Dices className="h-3 w-3 mr-1" />
+              Случайно
+            </Button>
+          </div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(POINT_BUY_COSTS).map(([score, cost]) => (
               <span key={score}>

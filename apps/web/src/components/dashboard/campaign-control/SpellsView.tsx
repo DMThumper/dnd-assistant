@@ -1,6 +1,6 @@
 "use client";
 
-import type { Character } from "@/types/game";
+import type { Character, KnownSpellItem } from "@/types/game";
 import { cn } from "@/lib/utils";
 import { BookOpen, Sparkles, Circle, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,20 @@ export function SpellsView({ character }: SpellsViewProps) {
     return slug
       .replace(/-/g, " ")
       .replace(/\b\w/g, char => char.toUpperCase());
+  };
+
+  // Get spell slug from KnownSpellItem
+  const getSpellSlug = (spell: KnownSpellItem): string => {
+    return typeof spell === 'object' && spell !== null ? spell.slug : spell;
+  };
+
+  // Get spell display name from KnownSpellItem
+  const getSpellName = (spell: KnownSpellItem): string => {
+    if (typeof spell === 'object' && spell !== null) {
+      return spell.name;
+    }
+    // Format spell name from slug
+    return formatSpellName(spell);
   };
 
   return (
@@ -124,12 +138,12 @@ export function SpellsView({ character }: SpellsViewProps) {
           <div className="flex flex-wrap gap-2">
             {knownSpells.map((spell) => (
               <Badge
-                key={spell}
+                key={getSpellSlug(spell)}
                 variant="outline"
                 className="bg-zinc-700/50 border-zinc-600 text-zinc-300"
               >
                 <Circle className="h-3 w-3 mr-1" />
-                {formatSpellName(spell)}
+                {getSpellName(spell)}
               </Badge>
             ))}
           </div>
